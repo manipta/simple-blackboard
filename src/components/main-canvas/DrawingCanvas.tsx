@@ -1,19 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import useCustomCursor from "../../services/hooks/useCustomCursor";
+import "./DrawingCanvas.scss";
 import Tools from "../tools/Tools";
 import {
+  Box,
   Button,
   IconButton,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  MenuItem,
+  NativeSelect,
+  Select,
 } from "@mui/material";
 import {
   MdLockOutline,
   MdEditNote,
   MdDelete,
   MdDeleteOutline,
+  MdNoteAdd,
+  MdUndo,
+  MdRedo,
 } from "react-icons/md";
 import { Point } from "../../interfaces/main-canvas/DrawingTool";
 import { chalkDusterTheme } from "../../game-theme/chalk-duster/chalk-duster-theme";
@@ -59,53 +67,92 @@ const DrawingCanvas = () => {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
+  const undoRedoStacks = useRef<
+    Record<number, { undoStack: string[]; redoStack: string[] }>
+  >({
+    0: { undoStack: [], redoStack: [] },
+  });
+
+  const captureSnapshot = () => {
+    if (canvasRef.current) {
+      return canvasRef.current.toDataURL();
+    }
+    return null;
+  };
+
+  const restoreSnapshot = (snapshot: string) => {
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      const img = new Image();
+      img.src = snapshot;
+      img.onload = () => {
+        ctx?.clearRect(
+          0,
+          0,
+          canvasRef.current!.width,
+          canvasRef.current!.height
+        );
+        ctx?.drawImage(img, 0, 0);
+      };
+    }
+  };
 
   const saveStateToUndoStack = () => {
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL();
-      setUndoStack((prev) => [...prev, dataURL]);
-      setRedoStack([]); // Clear redo stack on new action
+      undoRedoStacks.current[currentPage].undoStack = [
+        ...undoRedoStacks.current[currentPage].undoStack,
+        dataURL,
+      ];
+      // setUndoStack((prev) => [...prev, dataURL]);
+      // setRedoStack([]); // Clear redo stack on new action
+      undoRedoStacks.current[currentPage].redoStack = [];
     }
   };
   const undo = () => {
+    const undoStack = undoRedoStacks.current[currentPage].undoStack;
     if (undoStack.length === 0) return;
 
     const canvasContext = getCanvasContext();
     if (canvasContext) {
       const previousState = undoStack.pop();
-      setUndoStack([...undoStack]); // Update undoStack state
+      // undoRedoStacks.current[currentPage].undoStack=
+      // setUndoStack([...undoStack]); // Update undoStack state
       const currentState = canvasRef.current?.toDataURL();
-      if (currentState) setRedoStack((prev) => [...prev, currentState]);
+      if (currentState)
+        undoRedoStacks.current[currentPage].redoStack = [
+          ...undoRedoStacks.current[currentPage].redoStack,
+          currentState,
+        ];
+      // if (currentState) setRedoStack((prev) => [...prev, currentState]);
 
       clearCanvas();
       if (previousState) {
-        const img = new Image();
-        img.src = previousState;
-        img.onload = () => {
-          canvasContext.drawImage(img, 0, 0);
-        };
+        restoreSnapshot(previousState);
       }
     }
   };
 
   const redo = () => {
+    const redoStack = undoRedoStacks.current[currentPage].redoStack;
     if (redoStack.length === 0) return;
 
     const canvasContext = getCanvasContext();
     if (canvasContext) {
       const nextState = redoStack.pop();
-      setRedoStack([...redoStack]); // Update redoStack state
+      // setRedoStack([...redoStack]); // Update redoStack state
       const currentState = canvasRef.current?.toDataURL();
-      if (currentState) setUndoStack((prev) => [...prev, currentState]);
+      // if (currentState) setUndoStack((prev) => [...prev, currentState]);
+      if (currentState)
+        undoRedoStacks.current[currentPage].undoStack = [
+          ...undoRedoStacks.current[currentPage].undoStack,
+          currentState,
+        ];
 
       clearCanvas();
       if (nextState) {
-        const img = new Image();
-        img.src = nextState;
-        img.onload = () => {
-          canvasContext.drawImage(img, 0, 0);
-        };
+        restoreSnapshot(nextState);
       }
     }
   };
@@ -121,6 +168,9 @@ const DrawingCanvas = () => {
         return updatedPages;
       });
     }
+  };
+  const loadStacks = (pageIndex: number) => {
+    undoRedoStacks.current[currentPage].undoStack.push();
   };
   // Load a saved page onto the canvas
   const loadPage = (pageIndex: number) => {
@@ -141,6 +191,8 @@ const DrawingCanvas = () => {
     saveCurrentPage(); // Save current page before switching
     setPages((prevPages) => [...prevPages, ""]);
     setCurrentPage(pages.length); // Switch to the new page
+    const nextIndex = Object.keys(undoRedoStacks.current).length;
+    undoRedoStacks.current[nextIndex] = { undoStack: [], redoStack: [] };
     clearCanvas();
   };
 
@@ -183,6 +235,32 @@ const DrawingCanvas = () => {
 
   const { x, y } = useCustomCursor();
   const getCanvasContext = () => canvasRef.current?.getContext("2d");
+
+  function isCanvasClear() {
+    const ctx = getCanvasContext();
+    if (!ctx) return;
+    const imageData = ctx.getImageData(
+      0,
+      0,
+      canvasRef.current?.width,
+      canvasRef.current?.height
+    );
+
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      if (
+        data[i] !== 0 ||
+        data[i + 1] !== 0 ||
+        data[i + 2] !== 0 ||
+        data[i + 3] !== 0
+      ) {
+        return false; // Found a non-transparent black pixel, canvas is not clear
+      }
+    }
+
+    return true; // All pixels are transparent black, canvas is clear
+  }
 
   const clearCanvas = () => {
     const canvasContext = getCanvasContext();
@@ -282,6 +360,13 @@ const DrawingCanvas = () => {
   const handleMouseUp = () => {
     // setIsDrawing(false);
     isDrawing.current = false;
+  };
+
+  const clearScreen = () => {
+    if (isCanvasClear()) return;
+    saveStateToUndoStack();
+
+    clearCanvas();
   };
 
   return (
@@ -387,7 +472,7 @@ const DrawingCanvas = () => {
           )}
           <canvas
             ref={canvasRef}
-            width={windowWidth.current - 20}
+            width={windowWidth.current - 16}
             height={windowHeight.current - 60}
             style={{
               // position: "static",
@@ -402,30 +487,51 @@ const DrawingCanvas = () => {
           ></canvas>
         </div>
       </div>
-      <div className="flex justify-center">
+      <div className="flex flex-col">
         <div className="tools">
-          <div className="clearScreen">
-            <Button onClick={() => clearCanvas()}>
-              <MdDeleteOutline size={30} />
-            </Button>
-          </div>
-          {pages.map((_, index) => (
-            <Button
-              key={index}
-              variant={index === currentPage ? "contained" : "outlined"}
-              onClick={() => switchPage(index)}
-            >
-              Page {index + 1}
-            </Button>
-          ))}
+          <div className="clearScreen"></div>
+          <Button onClick={() => clearScreen()}>
+            <MdDeleteOutline size={20} />
+          </Button>
+          <Select
+            className="custom-select"
+            style={{
+              border: "none", // Remove border
+              outline: "none", // Remove outline
+              width: 100,
+              fontSize: 5,
+            }}
+            value={currentPage}
+            onChange={(e) => switchPage(e.target.value)}
+          >
+            {pages.map((_, index) => (
+              <MenuItem key={index} value={index}>
+                <Button
+                  style={{ width: "30%", fontSize: 12 }}
+                  className="text-sm"
+                  variant={index === currentPage ? "contained" : "outlined"}
+                  // onClick={() => switchPage(index)}
+                >
+                  Page {index + 1}
+                </Button>
+              </MenuItem>
+            ))}
+          </Select>
 
-          <Button onClick={addNewPage}>Add New Page</Button>
-          <Button onClick={undo}>Undo</Button>
-          <Button onClick={redo}>Redo</Button>
+          <Button onClick={addNewPage}>
+            <MdNoteAdd size={20} />
+          </Button>
+          <Button onClick={undo}>
+            <MdUndo size={20} />
+          </Button>
+          <Button onClick={redo}>
+            <MdRedo size={20} />
+          </Button>
+          <Button onClick={() => openDrawer()} style={{ color: "white " }}>
+            <BiArrowFromTop />
+          </Button>
         </div>
-        <Button onClick={() => openDrawer()} style={{ color: "white " }}>
-          <BiArrowFromTop />
-        </Button>
+        <div></div>
       </div>
     </>
   );

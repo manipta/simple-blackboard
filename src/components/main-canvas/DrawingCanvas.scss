@@ -1,0 +1,52 @@
+button:focus {
+  color: #0078d4; /* Change the icon color on focus */
+  outline: none; /* Remove the outline if needed */
+}
+
+button {
+  user-select: none; /* Prevents text selection, can also prevent the box around icon */
+}
+button:focus {
+  outline: none;
+}
+
+/* Same behavior for select elements */
+select {
+  user-select: none; /* Prevents text selection */
+  border: 1px solid #ccc;
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+/* Remove default focus outline and prevent text selection for select */
+select:focus {
+  outline: none; /* Remove the default outline */
+}
+
+/* In your CSS file */
+.custom-select .MuiOutlinedInput-root {
+  border: none;
+}
+.custom-select .MuiOutlinedInput-root fieldset {
+  border: none;
+}
+
+/* Basic styles for the select element */
+select {
+  user-select: none; /* Prevents text selection */
+  border: 1px solid #ccc;
+  padding: 8px;
+  font-size: 16px;
+  border-radius: 4px;
+  background-color: #fff;
+  -webkit-appearance: none; /* Remove default styling in WebKit-based browsers (e.g. Safari, Chrome) */
+  -moz-appearance: none; /* Remove default styling in Firefox */
+  appearance: none; /* Ensure consistent styling across all browsers */
+}
+
+/* Custom focus style */
+select:focus {
+  outline: none; /* Remove the default focus outline */
+}
