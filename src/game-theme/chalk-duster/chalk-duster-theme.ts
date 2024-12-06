@@ -1,5 +1,4 @@
 import { Theme } from "../../interfaces/main-canvas/DrawingTool";
-
 // Pen Config
 const penStroke = {
   lineCap: "round" as CanvasLineCap,

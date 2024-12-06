@@ -22,6 +22,8 @@ import {
   MdNoteAdd,
   MdUndo,
   MdRedo,
+  MdOutlineEdit,
+  MdDraw,
 } from "react-icons/md";
 import { Point } from "../../interfaces/main-canvas/DrawingTool";
 import { chalkDusterTheme } from "../../game-theme/chalk-duster/chalk-duster-theme";
@@ -29,6 +31,7 @@ import { useDrawerShell } from "../../services/providers/DrawerShellProvider";
 import { DrawerShell } from "../ui/DrawerShell";
 import { FiDelete } from "react-icons/fi";
 import { BiArrowFromTop } from "react-icons/bi";
+import { BsEraserFill, BsPencilFill } from "react-icons/bs";
 
 const DrawingCanvas = () => {
   // Theme Config
@@ -65,8 +68,11 @@ const DrawingCanvas = () => {
 
   const [pages, setPages] = useState<string[]>([]); // Store canvas data as Base64
   const [currentPage, setCurrentPage] = useState<number>(0);
+  const [strokeSize, setStrokeSize] = useState(0);
+  const [eraserSize, setEraserSize] = useState(10);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
+  const [isEraser, setIsEraser] = useState(false); // Tracks if eraser is selected
   const undoRedoStacks = useRef<
     Record<number, { undoStack: string[]; redoStack: string[] }>
   >({
@@ -78,6 +84,10 @@ const DrawingCanvas = () => {
       return canvasRef.current.toDataURL();
     }
     return null;
+  };
+
+  const toggleTool = () => {
+    setIsEraser(!isEraser);
   };
 
   const restoreSnapshot = (snapshot: string) => {
@@ -242,8 +252,8 @@ const DrawingCanvas = () => {
     const imageData = ctx.getImageData(
       0,
       0,
-      canvasRef.current?.width,
-      canvasRef.current?.height
+      canvasRef.current?.width || 0,
+      canvasRef.current?.height || 0
     );
 
     const data = imageData.data;
@@ -285,11 +295,23 @@ const DrawingCanvas = () => {
       canvasContext.beginPath();
       canvasContext.moveTo(point1.x, point1.y);
       canvasContext.lineTo(point2.x, point2.y);
-      canvasContext.strokeStyle = penStroke.strokeStyle;
-      canvasContext.lineWidth = penStroke?.lineWidth || 3;
-      canvasContext.lineCap = penStroke.lineCap;
-      canvasContext.stroke();
-      penSpecialEffect(canvasContext, point1.x, point1.y, point2.x, point2.y);
+
+      if (isEraser) {
+        canvasContext.strokeStyle = "red";
+        canvasContext.lineWidth = 1;
+        canvasContext.clearRect(
+          x - eraserSize / 2,
+          y - eraserSize / 2,
+          eraserSize,
+          eraserSize
+        ); // Erase
+      } else {
+        canvasContext.strokeStyle = penStroke.strokeStyle;
+        canvasContext.lineWidth = penStroke?.lineWidth || 3;
+        canvasContext.lineCap = penStroke.lineCap;
+        canvasContext.stroke();
+        penSpecialEffect(canvasContext, point1.x, point1.y, point2.x, point2.y);
+      }
     }
   };
 
@@ -310,8 +332,8 @@ const DrawingCanvas = () => {
       ? e.touches[0].clientY - rect.top
       : e.clientY - rect.top;
     const point1 = {
-      x: startX - 0.5 * penStroke.lineWidth,
-      y: startY - 0.5 * penStroke.lineWidth,
+      x: startX - 0.5 * penStroke.lineWidth!,
+      y: startY - 0.5 * penStroke.lineWidth!,
     };
     const point2 = { x: startX, y: startY };
     draw(point1, point2);
@@ -454,15 +476,34 @@ const DrawingCanvas = () => {
             //   }}
             // />
           }
-
-          {(isDrawing.current || fancyCursor.current) && (
+          {isEraser && isDrawing.current && (
             <div
-              className="custom-cursor fixed z-10 w-10 h-12 "
+              onDrag={(e) => {
+                e.preventDefault();
+              }}
+              onClick={() => {}}
+              className="fixed border-2 border-white"
               style={{
-                background: `url(${pen})`,
+                position: "fixed",
+                width: eraserSize,
+                height: eraserSize,
+                left: `${x - eraserSize / 2}px`,
+                top: `${y - eraserSize / 2}px`,
+              }}
+            />
+          )}
+          {isDrawing.current && (
+            <div
+              className={`custom-cursor fixed z-10 w-10 h-12 select-none no-drag ${
+                isEraser ? "" : null
+              } `}
+              style={{
+                backgroundImage: `url(${
+                  isEraser ? "/assets/duster2.png" : pen
+                })`,
                 // backgroundColor: "white",
                 // backgroundColor: "white",
-                backgroundSize: "auto",
+                backgroundSize: "contain",
                 backgroundRepeat: "no-repeat",
                 left: `${x + window.innerWidth * 0.001}px`,
                 top: `${y + window.innerWidth * 0.001}px`,
@@ -502,7 +543,7 @@ const DrawingCanvas = () => {
               fontSize: 5,
             }}
             value={currentPage}
-            onChange={(e) => switchPage(e.target.value)}
+            onChange={(e) => switchPage(+e.target.value)}
           >
             {pages.map((_, index) => (
               <MenuItem key={index} value={index}>
@@ -526,6 +567,9 @@ const DrawingCanvas = () => {
           </Button>
           <Button onClick={redo}>
             <MdRedo size={20} />
+          </Button>
+          <Button onClick={toggleTool}>
+            {isEraser ? <MdDraw size={20} /> : <BsEraserFill size={20} />}
           </Button>
           <Button onClick={() => openDrawer()} style={{ color: "white " }}>
             <BiArrowFromTop />
