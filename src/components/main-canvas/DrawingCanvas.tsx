@@ -1,9 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import useCustomCursor from "../../services/hooks/useCustomCursor";
 import "./DrawingCanvas.scss";
-import Tools from "../tools/Tools";
 import {
-  Box,
   Button,
   IconButton,
   ListItem,
@@ -11,27 +9,23 @@ import {
   ListItemIcon,
   ListItemText,
   MenuItem,
-  NativeSelect,
   Select,
 } from "@mui/material";
 import {
   MdLockOutline,
   MdEditNote,
-  MdDelete,
   MdDeleteOutline,
   MdNoteAdd,
   MdUndo,
   MdRedo,
-  MdOutlineEdit,
   MdDraw,
 } from "react-icons/md";
 import { Point } from "../../interfaces/main-canvas/DrawingTool";
 import { chalkDusterTheme } from "../../game-theme/chalk-duster/chalk-duster-theme";
 import { useDrawerShell } from "../../services/providers/DrawerShellProvider";
 import { DrawerShell } from "../ui/DrawerShell";
-import { FiDelete } from "react-icons/fi";
 import { BiArrowFromTop } from "react-icons/bi";
-import { BsEraserFill, BsPencilFill } from "react-icons/bs";
+import { BsEraserFill } from "react-icons/bs";
 
 const DrawingCanvas = () => {
   // Theme Config
@@ -73,11 +67,9 @@ const DrawingCanvas = () => {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [isEraser, setIsEraser] = useState(false); // Tracks if eraser is selected
-  const undoRedoStacks = useRef<
-    Record<number, { undoStack: string[]; redoStack: string[] }>
-  >({
-    0: { undoStack: [], redoStack: [] },
-  });
+  const [, setUndoRedoStack] = useState<
+    { undoStack: string[]; redoStack: string[] }[]
+  >([{ undoStack: [], redoStack: [] }]);
 
   const captureSnapshot = () => {
     if (canvasRef.current) {
@@ -111,60 +103,48 @@ const DrawingCanvas = () => {
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL();
-      undoRedoStacks.current[currentPage].undoStack = [
-        ...undoRedoStacks.current[currentPage].undoStack,
-        dataURL,
-      ];
-      // setUndoStack((prev) => [...prev, dataURL]);
-      // setRedoStack([]); // Clear redo stack on new action
-      undoRedoStacks.current[currentPage].redoStack = [];
+      setUndoRedoStack((prev) => {
+        const updatedStack = [...prev];
+        updatedStack[currentPage].undoStack.push(dataURL);
+        updatedStack[currentPage].redoStack = []; // Clear redo stack
+        return updatedStack;
+      });
     }
   };
   const undo = () => {
-    const undoStack = undoRedoStacks.current[currentPage].undoStack;
-    if (undoStack.length === 0) return;
+    setUndoRedoStack((prev) => {
+      const updatedStack = [...prev];
+      const undoStack = updatedStack[currentPage].undoStack;
+      const redoStack = updatedStack[currentPage].redoStack;
 
-    const canvasContext = getCanvasContext();
-    if (canvasContext) {
-      const previousState = undoStack.pop();
-      // undoRedoStacks.current[currentPage].undoStack=
-      // setUndoStack([...undoStack]); // Update undoStack state
-      const currentState = canvasRef.current?.toDataURL();
-      if (currentState)
-        undoRedoStacks.current[currentPage].redoStack = [
-          ...undoRedoStacks.current[currentPage].redoStack,
-          currentState,
-        ];
-      // if (currentState) setRedoStack((prev) => [...prev, currentState]);
+      if (undoStack.length > 0) {
+        const currentState = canvasRef.current?.toDataURL();
+        if (currentState) redoStack.push(currentState);
 
-      clearCanvas();
-      if (previousState) {
-        restoreSnapshot(previousState);
+        const previousState = undoStack.pop();
+        if (previousState) restoreSnapshot(previousState);
       }
-    }
+
+      return updatedStack;
+    });
   };
 
   const redo = () => {
-    const redoStack = undoRedoStacks.current[currentPage].redoStack;
-    if (redoStack.length === 0) return;
+    setUndoRedoStack((prev) => {
+      const updatedStack = [...prev];
+      const undoStack = updatedStack[currentPage].undoStack;
+      const redoStack = updatedStack[currentPage].redoStack;
 
-    const canvasContext = getCanvasContext();
-    if (canvasContext) {
-      const nextState = redoStack.pop();
-      // setRedoStack([...redoStack]); // Update redoStack state
-      const currentState = canvasRef.current?.toDataURL();
-      // if (currentState) setUndoStack((prev) => [...prev, currentState]);
-      if (currentState)
-        undoRedoStacks.current[currentPage].undoStack = [
-          ...undoRedoStacks.current[currentPage].undoStack,
-          currentState,
-        ];
+      if (redoStack.length > 0) {
+        const currentState = canvasRef.current?.toDataURL();
+        if (currentState) undoStack.push(currentState);
 
-      clearCanvas();
-      if (nextState) {
-        restoreSnapshot(nextState);
+        const nextState = redoStack.pop();
+        if (nextState) restoreSnapshot(nextState);
       }
-    }
+
+      return updatedStack;
+    });
   };
 
   // Save the current canvas state
@@ -179,9 +159,49 @@ const DrawingCanvas = () => {
       });
     }
   };
-  const loadStacks = (pageIndex: number) => {
-    undoRedoStacks.current[currentPage].undoStack.push();
+  const deletePage = (pageIndex: number) => {
+    console.log("Deleting", pageIndex);
+    if (pages.length === 1) {
+      alert("Ensures at least one page");
+      return;
+    } // Ensure at least one page exists
+
+    setPages((prev) => {
+      const updatedPages = [...prev];
+      updatedPages.splice(pageIndex, 1); // Remove the page
+      return updatedPages;
+    });
+
+    setUndoRedoStack((prev) => {
+      const updatedStack = [...prev];
+      updatedStack.splice(pageIndex, 1); // Remove the undo/redo stack
+      return updatedStack;
+    });
+    setCurrentPage((prev) => {
+      const newPage =
+        prev === pageIndex
+          ? Math.max(0, prev - 1)
+          : prev > pageIndex
+          ? prev - 1
+          : prev;
+      console.log("New current page:", newPage);
+      return newPage;
+    });
+    // if (currentPage != pageIndex) {
+    //   setCurrentPage((prev) => Math.max(0, prev - 1));
+    // } else {
+    //   // Adjust current page
+    //   setCurrentPage((prev) => {
+    //     const newPage = prev > pageIndex ? prev - 1 : Math.max(0, prev - 1);
+    //     loadPage(newPage); // Safely load the new current page
+    //     return newPage;
+    //   });
+    // }
   };
+
+  // const loadStacks = (pageIndex: number) => {
+  //   undoRedoStacks.current[currentPage].undoStack.push();
+  // };
   // Load a saved page onto the canvas
   const loadPage = (pageIndex: number) => {
     const canvasContext = getCanvasContext();
@@ -197,12 +217,31 @@ const DrawingCanvas = () => {
       }
     }
   };
+  const addPageAtPosition = (position: number) => {
+    saveStateToUndoStack(); // Save the current page state before modifying
+
+    setPages((prevPages) => {
+      const newPages = [...prevPages];
+      newPages.splice(position, 0, ""); // Insert a blank page at the desired position
+      return newPages;
+    });
+
+    setUndoRedoStack((prevStacks) => {
+      const newStacks = [...prevStacks];
+      newStacks.splice(position, 0, { undoStack: [], redoStack: [] }); // Add a fresh undo/redo stack
+      return newStacks;
+    });
+
+    setCurrentPage(position); // Switch to the newly added page
+    clearCanvas();
+  };
+
   const addNewPage = () => {
-    saveCurrentPage(); // Save current page before switching
-    setPages((prevPages) => [...prevPages, ""]);
+    saveCurrentPage();
+
+    setPages((prev) => [...prev, ""]); // Add new blank page
+    setUndoRedoStack((prev) => [...prev, { undoStack: [], redoStack: [] }]); // Add new undo/redo stack
     setCurrentPage(pages.length); // Switch to the new page
-    const nextIndex = Object.keys(undoRedoStacks.current).length;
-    undoRedoStacks.current[nextIndex] = { undoStack: [], redoStack: [] };
     clearCanvas();
   };
 
@@ -555,6 +594,13 @@ const DrawingCanvas = () => {
                 >
                   Page {index + 1}
                 </Button>
+                <IconButton
+                  onClick={() => {
+                    deletePage(index);
+                  }}
+                >
+                  X
+                </IconButton>
               </MenuItem>
             ))}
           </Select>
@@ -573,6 +619,18 @@ const DrawingCanvas = () => {
           </Button>
           <Button onClick={() => openDrawer()} style={{ color: "white " }}>
             <BiArrowFromTop />
+          </Button>
+          <Button
+            onClick={() => deletePage(currentPage)}
+            style={{ color: "white " }}
+          >
+            Delete this page
+          </Button>
+          <Button
+            onClick={() => addPageAtPosition(currentPage)}
+            style={{ color: "white " }}
+          >
+            Add before this page
           </Button>
         </div>
         <div></div>
