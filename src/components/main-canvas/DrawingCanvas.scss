@@ -2,14 +2,17 @@ button:focus {
   color: #0078d4; /* Change the icon color on focus */
   outline: none; /* Remove the outline if needed */
 }
+.tool {
+  outline: none;
+  user-select: none;
+}
+.tool:focus {
+  outline: none;
+}
 
 button {
   user-select: none; /* Prevents text selection, can also prevent the box around icon */
 }
-button:focus {
-  outline: none;
-}
-
 /* Same behavior for select elements */
 select {
   user-select: none; /* Prevents text selection */

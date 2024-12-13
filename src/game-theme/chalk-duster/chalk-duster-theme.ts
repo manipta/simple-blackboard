@@ -13,9 +13,10 @@ const specialEffect = (
   xStart: number,
   yStart: number,
   xEnd: number,
-  yEnd: number
+  yEnd: number,
+  brushDiameter: number
 ) => {
-  const brushDiameter = 7;
+  // const brushDiameter = 7;
   const length = Math.round(
     Math.sqrt(Math.pow(xEnd - xStart, 2) + Math.pow(yEnd - yStart, 2)) /
       (5 / brushDiameter)

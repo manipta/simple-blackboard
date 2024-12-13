@@ -20,13 +20,14 @@ import {
   MdRedo,
   MdDraw,
 } from "react-icons/md";
-import { Point } from "../../interfaces/main-canvas/DrawingTool";
+import { Color, Point } from "../../interfaces/main-canvas/DrawingTool";
 import { chalkDusterTheme } from "../../game-theme/chalk-duster/chalk-duster-theme";
 import { useDrawerShell } from "../../services/providers/DrawerShellProvider";
 import { DrawerShell } from "../ui/DrawerShell";
 import { BiArrowFromTop } from "react-icons/bi";
 import { BsEraserFill } from "react-icons/bs";
-
+import { penSizes } from "../../constants";
+import ColorPickerComponent from "../color-picker/ColorPicker";
 const DrawingCanvas = () => {
   // Theme Config
   // -------
@@ -35,9 +36,17 @@ const DrawingCanvas = () => {
     xStart: number,
     yStart: number,
     xEnd: number,
-    yEnd: number
+    yEnd: number,
+    brushDiameter: number
   ) => {
-    currentTheme.specialEffect(canvasContext, xStart, yStart, xEnd, yEnd);
+    currentTheme.specialEffect(
+      canvasContext,
+      xStart,
+      yStart,
+      xEnd,
+      yEnd,
+      strokeSize
+    );
   };
   const currentTheme = chalkDusterTheme;
   const penStroke = currentTheme.penStroke;
@@ -62,12 +71,16 @@ const DrawingCanvas = () => {
 
   const [pages, setPages] = useState<string[]>([]); // Store canvas data as Base64
   const [currentPage, setCurrentPage] = useState<number>(0);
-  const [strokeSize, setStrokeSize] = useState(0);
+  const [strokeSize, setStrokeSize] = useState(2);
   const [eraserSize, setEraserSize] = useState(10);
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
   const [isEraser, setIsEraser] = useState(false); // Tracks if eraser is selected
-  const [, setUndoRedoStack] = useState<
+  const [color, setColor] = useState({
+    hue: 90,
+    saturation: 100,
+    luminosity: 50,
+    alpha: 1,
+  });
+  const [undoRedoStack, setUndoRedoStack] = useState<
     { undoStack: string[]; redoStack: string[] }[]
   >([{ undoStack: [], redoStack: [] }]);
 
@@ -80,6 +93,11 @@ const DrawingCanvas = () => {
 
   const toggleTool = () => {
     setIsEraser(!isEraser);
+  };
+  const handleSizeChange = (e) => {
+    isEraser
+      ? setEraserSize(e.target.value * 10)
+      : setStrokeSize(e.target.value);
   };
 
   const restoreSnapshot = (snapshot: string) => {
@@ -127,6 +145,7 @@ const DrawingCanvas = () => {
 
       return updatedStack;
     });
+    // saveStateToUndoStack();
   };
 
   const redo = () => {
@@ -149,6 +168,7 @@ const DrawingCanvas = () => {
 
   // Save the current canvas state
   const saveCurrentPage = () => {
+    console.log("savinggg...");
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL();
@@ -159,62 +179,68 @@ const DrawingCanvas = () => {
       });
     }
   };
+
   const deletePage = (pageIndex: number) => {
-    console.log("Deleting", pageIndex);
+    console.log("Deleting page at index:", pageIndex);
+
     if (pages.length === 1) {
       alert("Ensures at least one page");
       return;
-    } // Ensure at least one page exists
+    }
 
-    setPages((prev) => {
-      const updatedPages = [...prev];
-      updatedPages.splice(pageIndex, 1); // Remove the page
-      return updatedPages;
-    });
+    // Calculate updated pages and undoRedoStack **before updating state**
+    const updatedPages = pages.filter((_, index) => index !== pageIndex);
+    const updatedUndoRedoStack = undoRedoStack.filter(
+      (_, index) => index !== pageIndex
+    );
 
-    setUndoRedoStack((prev) => {
-      const updatedStack = [...prev];
-      updatedStack.splice(pageIndex, 1); // Remove the undo/redo stack
-      return updatedStack;
-    });
-    setCurrentPage((prev) => {
-      const newPage =
-        prev === pageIndex
-          ? Math.max(0, prev - 1)
-          : prev > pageIndex
-          ? prev - 1
-          : prev;
-      console.log("New current page:", newPage);
-      return newPage;
-    });
-    // if (currentPage != pageIndex) {
-    //   setCurrentPage((prev) => Math.max(0, prev - 1));
-    // } else {
-    //   // Adjust current page
-    //   setCurrentPage((prev) => {
-    //     const newPage = prev > pageIndex ? prev - 1 : Math.max(0, prev - 1);
-    //     loadPage(newPage); // Safely load the new current page
-    //     return newPage;
-    //   });
-    // }
+    // Determine the new current page safely
+    const newPageIndex =
+      currentPage >= pageIndex ? currentPage - 1 : currentPage;
+    console.log("New pages:", updatedPages, "New current page:", newPageIndex);
+
+    // Update states
+    setPages(updatedPages);
+    setUndoRedoStack(updatedUndoRedoStack);
+    setCurrentPage(newPageIndex);
+
+    // Load the new page after state updates
+    clearCanvas();
+    loadData(updatedPages[newPageIndex]);
   };
 
-  // const loadStacks = (pageIndex: number) => {
-  //   undoRedoStacks.current[currentPage].undoStack.push();
-  // };
-  // Load a saved page onto the canvas
+  const loadData = (dataURL: string) => {
+    const canvasContext = getCanvasContext();
+    if (!canvasContext) return;
+    if (dataURL) {
+      const img = new Image();
+      img.src = dataURL;
+      img.onload = () => {
+        canvasContext.drawImage(img, 0, 0);
+      };
+    }
+  };
+  const onInput = (hue) => {
+    setColor((prev) => ({ ...prev, hue }));
+  };
   const loadPage = (pageIndex: number) => {
+    console.log("Loading", pageIndex);
+    console.log(pages);
     const canvasContext = getCanvasContext();
     if (canvasContext) {
-      clearCanvas(); // Clear the current canvas
-      const dataURL = pages[pageIndex];
-      if (dataURL) {
-        const img = new Image();
-        img.src = dataURL;
-        img.onload = () => {
-          canvasContext.drawImage(img, 0, 0);
-        };
+      if (pageIndex >= 0 && pageIndex < pages.length) {
+        clearCanvas(); // Clear the current canvas
+        const dataURL = pages[pageIndex];
+        if (dataURL) {
+          const img = new Image();
+          img.src = dataURL;
+          img.onload = () => {
+            canvasContext.drawImage(img, 0, 0);
+          };
+        }
       }
+    } else {
+      console.warn("Invalid page index:", pageIndex);
     }
   };
   const addPageAtPosition = (position: number) => {
@@ -254,6 +280,7 @@ const DrawingCanvas = () => {
     if (pages.length === 0) {
       setPages([""]);
     }
+    // saveStateToUndoStack();
     resetCanvas();
 
     const handleTouch = (e: TouchEvent) => e.preventDefault();
@@ -279,6 +306,57 @@ const DrawingCanvas = () => {
       }
     };
   }, []);
+
+  function getColorString(
+    color: Color,
+    format: "hex" | "hsl" | "rgba"
+  ): string {
+    const { hue, saturation, luminosity, alpha } = color;
+
+    switch (format) {
+      case "hex":
+        return hslToHex(hue, saturation, luminosity, alpha);
+
+      case "hsl":
+        return `hsl(${hue}, ${saturation}%, ${luminosity}%)`;
+
+      case "rgba":
+        return `rgba(${hslToRgb(hue, saturation, luminosity).join(
+          ", "
+        )}, ${alpha})`;
+
+      default:
+        throw new Error(
+          "Invalid format. Supported formats are hex, hsl, and rgba."
+        );
+    }
+  }
+
+  // Helper: Converts HSL to RGB
+  function hslToRgb(h: number, s: number, l: number): [number, number, number] {
+    s /= 100;
+    l /= 100;
+
+    const k = (n: number) => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = (n: number) =>
+      Math.round(
+        255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
+      );
+
+    return [f(0), f(8), f(4)];
+  }
+
+  // Helper: Converts HSL to Hex
+  function hslToHex(h: number, s: number, l: number, a: number): string {
+    const [r, g, b] = hslToRgb(h, s, l);
+    const alphaHex = Math.round(a * 255)
+      .toString(16)
+      .padStart(2, "0"); // Convert alpha to hex
+    return `#${[r, g, b]
+      .map((x) => x.toString(16).padStart(2, "0"))
+      .join("")}${alphaHex}`;
+  }
 
   const { openDrawer } = useDrawerShell();
 
@@ -345,11 +423,19 @@ const DrawingCanvas = () => {
           eraserSize
         ); // Erase
       } else {
-        canvasContext.strokeStyle = penStroke.strokeStyle;
-        canvasContext.lineWidth = penStroke?.lineWidth || 3;
+        canvasContext.strokeStyle =
+          getColorString(color, "hex") || penStroke.strokeStyle;
+        canvasContext.lineWidth = strokeSize;
         canvasContext.lineCap = penStroke.lineCap;
         canvasContext.stroke();
-        penSpecialEffect(canvasContext, point1.x, point1.y, point2.x, point2.y);
+        penSpecialEffect(
+          canvasContext,
+          point1.x,
+          point1.y,
+          point2.x,
+          point2.y,
+          strokeSize
+        );
       }
     }
   };
@@ -419,7 +505,7 @@ const DrawingCanvas = () => {
     isOutside ? handleMouseUp() : handleMouseMove(e);
   };
   const handleMouseUp = () => {
-    // setIsDrawing(false);
+    saveCurrentPage();
     isDrawing.current = false;
   };
 
@@ -430,42 +516,102 @@ const DrawingCanvas = () => {
     clearCanvas();
   };
 
+  function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(`Failed to load script: ${src}`);
+      document.head.appendChild(script);
+    });
+  }
+
+  const exportToPDF = async () => {
+    if (pages.length === 0) {
+      console.error("No pages to export");
+      return;
+    }
+
+    await loadScript(
+      "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+    );
+
+    const { jsPDF } = (window as any).jspdf;
+    const pdf = new jsPDF("p", "mm", "a4"); // A4 size PDF
+    const pdfWidth = 210; // Width in mm
+    const pdfHeight = 297; // Height in mm
+
+    pages.forEach((pageData, index) => {
+      const img = new Image();
+      img.src = pageData;
+
+      img.onload = () => {
+        const aspectRatio = img.width / img.height;
+        const imgWidth = pdfWidth;
+        const imgHeight = pdfWidth / aspectRatio;
+
+        // Add the image to the PDF
+        if (index > 0) pdf.addPage(); // Add new page for all except the first
+        pdf.addImage(pageData, "PNG", 0, 0, imgWidth, imgHeight);
+
+        // Save the PDF after processing the last image
+        if (index === pages.length - 1) {
+          pdf.save("multi-page.pdf");
+        }
+      };
+    });
+  };
+
+  // const exportCanvasToPDF = async () => {
+  //   try {
+  //     // Load external libraries dynamically
+  //     await loadScript(
+  //       "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+  //     );
+  //     await loadScript(
+  //       "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+  //     );
+
+  //     const canvas = document.getElementById("myCanvas") as HTMLCanvasElement;
+
+  //     if (!canvas) {
+  //       console.error("Canvas element not found");
+  //       return;
+  //     }
+
+  //     // Access loaded libraries
+  //     const html2canvas = (window as any).html2canvas;
+  //     const { jsPDF } = (window as any).jspdf;
+
+  //     // Convert canvas to image
+  //     const canvasImage = await html2canvas(canvas);
+  //     const imageData = canvasImage.toDataURL("image/png");
+
+  //     // Create PDF
+  //     const pdf = new jsPDF("p", "mm", "a4");
+  //     const pdfWidth = 210;
+  //     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+  //     pdf.addImage(imageData, "PNG", 0, 0, pdfWidth, pdfHeight);
+  //     pdf.save("canvas.pdf");
+  //   } catch (error) {
+  //     console.error("Error exporting to PDF:", error);
+  //   }
+  // };
+
   return (
     <>
       <DrawerShell
+        height={370}
+        children={undefined}
         menu={
-          <div className="h-full flex flex-col justify-between absolute">
+          <div className=" flex flex-col absolute p-2 items-center justify-center w-full h-fit">
             <div>
-              Hi
-              <ListItem>
-                <ListItemButton
-                  onClick={() => console.log("HI")}
-                  sx={{ borderRadius: "8px" }}
-                >
-                  <ListItemIcon>
-                    <MdLockOutline size="24" />
-                  </ListItemIcon>
-                  <ListItemText primary="Reset Password" />
-                </ListItemButton>
-              </ListItem>
-              <ListItem>
-                <ListItemButton
-                  onClick={() => console.log("HI")}
-                  sx={{
-                    // backgroundColor: `${isActive ? "rgba(0, 0, 0, 0.05)" : ""}`,
-                    borderRadius: "8px",
-                  }}
-                >
-                  <ListItemIcon>
-                    <MdEditNote size="24" />
-                  </ListItemIcon>
-                  <ListItemText primary="School Profile" />
-                </ListItemButton>
-              </ListItem>
+              <ColorPickerComponent color={color} setColor={setColor} />
             </div>
           </div>
         }
-        children={undefined}
       ></DrawerShell>
       <div
         className="flex flex-col m-0 p-0 "
@@ -485,36 +631,6 @@ const DrawingCanvas = () => {
         onTouchCancel={() => handleMouseUp()}
       >
         <div>
-          {/* Duster positioned dynamically */}
-          {
-            // <div
-            //   className={`absolute z-10`}
-            //   id="duster"
-            //   style={{
-            //     width: `${
-            //       (isLandscape.current
-            //         ? windowWidth.current
-            //         : windowHeight.current) * 0.1
-            //     }px`,
-            //     height:
-            //       (isLandscape.current
-            //         ? windowWidth.current
-            //         : windowHeight.current) / 24,
-            //     background: `url(${eraser})`,
-            //     backgroundSize: "contain",
-            //     backgroundRepeat: "no-repeat",
-            //     left: isLandscape.current
-            //       ? (windowWidth.current * 5.1) / 6
-            //       : windowWidth.current / 6,
-            //     top: isLandscape.current
-            //       ? (windowHeight.current * 5) / 6 - windowHeight.current * 0.1
-            //       : (windowHeight.current * 5.1) / 6 +
-            //         windowHeight.current * 0.05,
-            //     // client top +duster height+ canvas height
-            //     transform: `${isLandscape.current ? " " : "rotateZ(90deg)"}`,
-            //   }}
-            // />
-          }
           {isEraser && isDrawing.current && (
             <div
               onDrag={(e) => {
@@ -551,6 +667,7 @@ const DrawingCanvas = () => {
             />
           )}
           <canvas
+            id="myCanvas"
             ref={canvasRef}
             width={windowWidth.current - 16}
             height={windowHeight.current - 60}
@@ -595,7 +712,9 @@ const DrawingCanvas = () => {
                   Page {index + 1}
                 </Button>
                 <IconButton
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
                     deletePage(index);
                   }}
                 >
@@ -604,16 +723,22 @@ const DrawingCanvas = () => {
               </MenuItem>
             ))}
           </Select>
-
           <Button onClick={addNewPage}>
             <MdNoteAdd size={20} />
           </Button>
-          <Button onClick={undo}>
-            <MdUndo size={20} />
-          </Button>
-          <Button onClick={redo}>
+          <IconButton
+            className="tool"
+            disabled={undoRedoStack[currentPage].undoStack.length == 0}
+            onClick={undo}
+          >
+            <MdUndo className="tool" size={20} />
+          </IconButton>
+          <IconButton
+            disabled={undoRedoStack[currentPage].redoStack.length == 0}
+            onClick={redo}
+          >
             <MdRedo size={20} />
-          </Button>
+          </IconButton>
           <Button onClick={toggleTool}>
             {isEraser ? <MdDraw size={20} /> : <BsEraserFill size={20} />}
           </Button>
@@ -622,18 +747,45 @@ const DrawingCanvas = () => {
           </Button>
           <Button
             onClick={() => deletePage(currentPage)}
-            style={{ color: "white " }}
+            style={{ color: "white ", backgroundColor: "GrayText" }}
           >
             Delete this page
           </Button>
           <Button
             onClick={() => addPageAtPosition(currentPage)}
-            style={{ color: "white " }}
+            style={{ color: "white ", backgroundColor: "GrayText" }}
           >
             Add before this page
           </Button>
+          <Select
+            className="custom-select"
+            style={{
+              border: "none", // Remove border
+              outline: "none", // Remove outline
+              width: 50,
+              fontSize: 5,
+            }}
+            value={isEraser ? eraserSize / 10 : strokeSize}
+            onChange={handleSizeChange}
+          >
+            {penSizes.map((size, index) => (
+              <MenuItem key={index} value={size}>
+                <div
+                  style={{
+                    width: size, // Width and height represent the pen size
+                    height: size,
+                    backgroundColor: "black",
+                    borderRadius: "50%", // Makes it look like a pen tip
+                  }}
+                ></div>
+              </MenuItem>
+            ))}
+          </Select>
+          {isEraser && (
+            <ColorPickerComponent color={color} setColor={setColor} />
+          )}
+          <div onClick={async () => await exportToPDF()}>Export</div>
         </div>
-        <div></div>
       </div>
     </>
   );

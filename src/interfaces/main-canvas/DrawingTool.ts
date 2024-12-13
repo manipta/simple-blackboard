@@ -35,6 +35,14 @@ export interface Theme {
     xStart: number,
     yStart: number,
     xEnd: number,
-    yEnd: number
+    yEnd: number,
+    brushDiameter: number
   ) => void;
 }
+
+export type Color = {
+  hue: number;
+  saturation: number;
+  luminosity: number;
+  alpha: number;
+};

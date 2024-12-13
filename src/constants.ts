@@ -7,3 +7,5 @@ export enum UserType {
   AdFreeUser = "ad-free-user",
   Premium = "premium-user",
 }
+
+export const penSizes = [2, 4, 6, 8, 10, 12]; // Pen sizes in pixels
