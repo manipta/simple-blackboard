@@ -28,7 +28,7 @@ export const DrawerShell = ({ menu, children, height }: DrawerShellProps) => {
           display: { xs: "block", sm: "none" },
           "& .MuiDrawer-paper": {
             boxSizing: "border-box",
-            height: height | drawerHeight, // Set height instead of width
+            height: height || drawerHeight, // Set height instead of width
             width: "100%", // Make it span the full width of the screen
             borderTopLeftRadius: "8px", // Optional: rounded corners
             borderTopRightRadius: "8px", // Optional: rounded corners

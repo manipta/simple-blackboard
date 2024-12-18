@@ -1,33 +1,29 @@
 import { useEffect, useRef, useState } from "react";
 import useCustomCursor from "../../services/hooks/useCustomCursor";
 import "./DrawingCanvas.scss";
+import { Button, IconButton, MenuItem, Select, Tooltip } from "@mui/material";
+import CancelIcon from "@mui/icons-material/Cancel";
+import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
+import ColorLensTwoToneIcon from "@mui/icons-material/ColorLensTwoTone";
+import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import {
-  Button,
-  IconButton,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  MenuItem,
-  Select,
-} from "@mui/material";
-import {
-  MdLockOutline,
-  MdEditNote,
   MdDeleteOutline,
   MdNoteAdd,
   MdUndo,
   MdRedo,
   MdDraw,
+  MdOutlineUndo,
+  MdDelete,
+  MdArrowDropDown,
+  MdAddCard,
 } from "react-icons/md";
 import { Color, Point } from "../../interfaces/main-canvas/DrawingTool";
 import { chalkDusterTheme } from "../../game-theme/chalk-duster/chalk-duster-theme";
 import { useDrawerShell } from "../../services/providers/DrawerShellProvider";
 import { DrawerShell } from "../ui/DrawerShell";
-import { BiArrowFromTop } from "react-icons/bi";
 import { BsEraserFill } from "react-icons/bs";
 import { penSizes } from "../../constants";
-import ColorPickerComponent from "../color-picker/ColorPicker";
+import ColorPicker from "../color-picker/ColorPicker";
 const DrawingCanvas = () => {
   // Theme Config
   // -------
@@ -74,22 +70,21 @@ const DrawingCanvas = () => {
   const [strokeSize, setStrokeSize] = useState(2);
   const [eraserSize, setEraserSize] = useState(10);
   const [isEraser, setIsEraser] = useState(false); // Tracks if eraser is selected
+  // State with a default color (HSL with Alpha)
   const [color, setColor] = useState({
-    hue: 90,
-    saturation: 100,
-    luminosity: 50,
-    alpha: 1,
+    hue: 360, // (0-360)
+    saturation: 1, //(0-1)
+    luminosity: 1, //(0-1)
+    alpha: 1, //(0-1)
   });
+  useEffect(() => {
+    const ctx = getCanvasContext();
+    if (!ctx) return;
+    ctx.strokeStyle = getColorString(color, "rgba");
+  }, [color]);
   const [undoRedoStack, setUndoRedoStack] = useState<
     { undoStack: string[]; redoStack: string[] }[]
   >([{ undoStack: [], redoStack: [] }]);
-
-  const captureSnapshot = () => {
-    if (canvasRef.current) {
-      return canvasRef.current.toDataURL();
-    }
-    return null;
-  };
 
   const toggleTool = () => {
     setIsEraser(!isEraser);
@@ -196,7 +191,8 @@ const DrawingCanvas = () => {
 
     // Determine the new current page safely
     const newPageIndex =
-      currentPage >= pageIndex ? currentPage - 1 : currentPage;
+      // Handling edge case when 1st page being deleted
+      currentPage >= pageIndex ? Math.max(0, currentPage - 1) : currentPage;
     console.log("New pages:", updatedPages, "New current page:", newPageIndex);
 
     // Update states
@@ -219,9 +215,6 @@ const DrawingCanvas = () => {
         canvasContext.drawImage(img, 0, 0);
       };
     }
-  };
-  const onInput = (hue) => {
-    setColor((prev) => ({ ...prev, hue }));
   };
   const loadPage = (pageIndex: number) => {
     console.log("Loading", pageIndex);
@@ -272,7 +265,7 @@ const DrawingCanvas = () => {
   };
 
   const switchPage = (pageIndex: number) => {
-    saveCurrentPage(); // Save the current page before switching
+    // saveCurrentPage(); // Save the current page before switching
     setCurrentPage(pageIndex);
     loadPage(pageIndex); // Load the selected page
   };
@@ -321,9 +314,8 @@ const DrawingCanvas = () => {
         return `hsl(${hue}, ${saturation}%, ${luminosity}%)`;
 
       case "rgba":
-        return `rgba(${hslToRgb(hue, saturation, luminosity).join(
-          ", "
-        )}, ${alpha})`;
+        const [r, g, b] = hslToRgb(hue, saturation, luminosity);
+        return `rgba(${r}, ${g}, ${b}, ${Math.round(alpha * 100) / 100})`;
 
       default:
         throw new Error(
@@ -334,25 +326,47 @@ const DrawingCanvas = () => {
 
   // Helper: Converts HSL to RGB
   function hslToRgb(h: number, s: number, l: number): [number, number, number] {
-    s /= 100;
-    l /= 100;
+    console.log(s, l);
+    // s /= 100; // Convert percentage to 0-1 range
+    // l /= 100;
 
-    const k = (n: number) => (n + h / 30) % 12;
-    const a = s * Math.min(l, 1 - l);
-    const f = (n: number) =>
-      Math.round(
-        255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
-      );
+    const c = (1 - Math.abs(2 * l - 1)) * s; // Chroma
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1)); // Intermediate value
+    const m = l - c / 2; // Match lightness adjustment
 
-    return [f(0), f(8), f(4)];
+    let r = 0,
+      g = 0,
+      b = 0;
+
+    if (0 <= h && h < 60) {
+      [r, g, b] = [c, x, 0];
+    } else if (60 <= h && h < 120) {
+      [r, g, b] = [x, c, 0];
+    } else if (120 <= h && h < 180) {
+      [r, g, b] = [0, c, x];
+    } else if (180 <= h && h < 240) {
+      [r, g, b] = [0, x, c];
+    } else if (240 <= h && h < 300) {
+      [r, g, b] = [x, 0, c];
+    } else if (300 <= h && h < 360) {
+      [r, g, b] = [c, 0, x];
+    }
+
+    // Convert to [0, 255] range
+    const toRgb = (val: number) => Math.round((val + m) * 255);
+
+    return [toRgb(r), toRgb(g), toRgb(b)];
   }
 
   // Helper: Converts HSL to Hex
   function hslToHex(h: number, s: number, l: number, a: number): string {
     const [r, g, b] = hslToRgb(h, s, l);
-    const alphaHex = Math.round(a * 255)
-      .toString(16)
-      .padStart(2, "0"); // Convert alpha to hex
+    const alphaHex =
+      a !== undefined
+        ? Math.round(a * 255)
+            .toString(16)
+            .padStart(2, "0")
+        : "ff"; // If alpha is undefined, assume fully opaque
     return `#${[r, g, b]
       .map((x) => x.toString(16).padStart(2, "0"))
       .join("")}${alphaHex}`;
@@ -414,8 +428,9 @@ const DrawingCanvas = () => {
       canvasContext.lineTo(point2.x, point2.y);
 
       if (isEraser) {
-        canvasContext.strokeStyle = "red";
-        canvasContext.lineWidth = 1;
+        // canvasContext.strokeStyle = "red";
+        // canvasContext.lineWidth = 1;
+        canvasContext.lineCap = "round";
         canvasContext.clearRect(
           x - eraserSize / 2,
           y - eraserSize / 2,
@@ -423,8 +438,7 @@ const DrawingCanvas = () => {
           eraserSize
         ); // Erase
       } else {
-        canvasContext.strokeStyle =
-          getColorString(color, "hex") || penStroke.strokeStyle;
+        canvasContext.strokeStyle = getColorString(color, "rgba");
         canvasContext.lineWidth = strokeSize;
         canvasContext.lineCap = penStroke.lineCap;
         canvasContext.stroke();
@@ -538,30 +552,126 @@ const DrawingCanvas = () => {
     );
 
     const { jsPDF } = (window as any).jspdf;
-    const pdf = new jsPDF("p", "mm", "a4"); // A4 size PDF
-    const pdfWidth = 210; // Width in mm
-    const pdfHeight = 297; // Height in mm
+    const pdf = new jsPDF("p", "mm", "a4"); // Portrait, A4 size
 
-    pages.forEach((pageData, index) => {
-      const img = new Image();
-      img.src = pageData;
+    const pdfWidth = 210; // A4 width in mm
+    const pdfHeight = 297; // A4 height in mm
+    const backgroundColor = "black"; // Set the background color
 
-      img.onload = () => {
-        const aspectRatio = img.width / img.height;
-        const imgWidth = pdfWidth;
-        const imgHeight = pdfWidth / aspectRatio;
+    // Helper function to load an image as a Promise
+    const loadImage = (src: string) =>
+      new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+      });
 
-        // Add the image to the PDF
-        if (index > 0) pdf.addPage(); // Add new page for all except the first
-        pdf.addImage(pageData, "PNG", 0, 0, imgWidth, imgHeight);
+    // Process pages sequentially
+    for (let index = 0; index < pages.length; index++) {
+      try {
+        const img = await loadImage(pages[index]);
 
-        // Save the PDF after processing the last image
-        if (index === pages.length - 1) {
-          pdf.save("multi-page.pdf");
+        const imgWidth = img.width;
+        const imgHeight = img.height;
+        const aspectRatio = imgWidth / imgHeight;
+
+        let finalWidth = pdfWidth;
+        let finalHeight = pdfHeight;
+
+        // Scale the image to fit within the PDF while maintaining aspect ratio
+        if (aspectRatio > pdfWidth / pdfHeight) {
+          finalHeight = finalWidth / aspectRatio;
+        } else {
+          finalWidth = finalHeight * aspectRatio;
         }
-      };
-    });
+
+        const xOffset = (pdfWidth - finalWidth) / 2; // Center horizontally
+        const yOffset = (pdfHeight - finalHeight) / 2; // Center vertically
+
+        // Add background color
+        pdf.setFillColor(backgroundColor);
+        pdf.rect(0, 0, pdfWidth, pdfHeight, "F"); // Draw filled rectangle
+
+        // Add the dynamic image on top
+        pdf.addImage(
+          pages[index],
+          "PNG",
+          xOffset,
+          yOffset,
+          finalWidth,
+          finalHeight
+        );
+
+        // Add a new page, unless it's the last page
+        if (index < pages.length - 1) {
+          pdf.addPage();
+        }
+      } catch (error) {
+        console.error("Error loading image:", error);
+      }
+    }
+
+    // Save the PDF after processing all pages
+    pdf.save("multi-page.pdf");
   };
+
+  // const exportToPDF = async () => {
+  //   if (pages.length === 0) {
+  //     console.error("No pages to export");
+  //     return;
+  //   }
+
+  //   await loadScript(
+  //     "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
+  //   );
+
+  //   const { jsPDF } = (window as any).jspdf;
+  //   const pdf = new jsPDF("p", "mm", "a4"); // Portrait, millimeters, A4 size
+
+  //   const pdfWidth = 210; // A4 width in mm
+  //   const pdfHeight = 297; // A4 height in mm
+
+  //   pages.forEach((pageData, index) => {
+  //     const img = new Image();
+  //     img.src = pageData;
+
+  //     img.onload = () => {
+  //       const imgWidth = img.width;
+  //       const imgHeight = img.height;
+  //       const aspectRatio = imgWidth / imgHeight;
+
+  //       let finalWidth = pdfWidth;
+  //       let finalHeight = pdfHeight;
+
+  //       // Scale the image to fit within the PDF while maintaining the aspect ratio
+  //       if (aspectRatio > pdfWidth / pdfHeight) {
+  //         finalHeight = finalWidth / aspectRatio;
+  //       } else {
+  //         finalWidth = finalHeight * aspectRatio;
+  //       }
+
+  //       const xOffset = (pdfWidth - finalWidth) / 2; // Center horizontally
+  //       const yOffset = (pdfHeight - finalHeight) / 2; // Center vertically
+
+  //       // Add the image to the PDF
+  //       if (index > 0) pdf.addPage(); // Add new page for all except the first
+  //       pdf.addImage(
+  //         pageData,
+  //         "PNG",
+  //         xOffset,
+  //         yOffset,
+  //         finalWidth,
+  //         finalHeight
+  //       );
+
+  //       // Save the PDF after processing the last image
+  //       if (index === pages.length - 1) {
+  //         pdf.save("multi-page.pdf");
+  //       }
+  //     };
+  //   });
+  // };
 
   // const exportCanvasToPDF = async () => {
   //   try {
@@ -606,9 +716,9 @@ const DrawingCanvas = () => {
         height={370}
         children={undefined}
         menu={
-          <div className=" flex flex-col absolute p-2 items-center justify-center w-full h-fit">
+          <div className=" flex flex-col absolute p-2 items-center justify-center w-full h-fit z-10">
             <div>
-              <ColorPickerComponent color={color} setColor={setColor} />
+              <ColorPicker color={color} setColor={setColor} />
             </div>
           </div>
         }
@@ -685,106 +795,179 @@ const DrawingCanvas = () => {
         </div>
       </div>
       <div className="flex flex-col">
-        <div className="tools">
-          <div className="clearScreen"></div>
-          <Button onClick={() => clearScreen()}>
-            <MdDeleteOutline size={20} />
-          </Button>
-          <Select
-            className="custom-select"
-            style={{
-              border: "none", // Remove border
-              outline: "none", // Remove outline
-              width: 100,
-              fontSize: 5,
-            }}
-            value={currentPage}
-            onChange={(e) => switchPage(+e.target.value)}
-          >
-            {pages.map((_, index) => (
-              <MenuItem key={index} value={index}>
-                <Button
-                  style={{ width: "30%", fontSize: 12 }}
-                  className="text-sm"
-                  variant={index === currentPage ? "contained" : "outlined"}
-                  // onClick={() => switchPage(index)}
+        <div className="tools flex p-1 flex-col">
+          <div className="row1">
+            <Select
+              // IconComponent={}
+              className="custom-select w-24 p-0 m-0"
+              style={{
+                border: "none", // Remove border
+                outline: "none", // Remove outline
+                fontSize: 5,
+                padding: 0,
+                background: "gray",
+              }}
+              sx={{
+                padding: 0, // Removes the outer padding
+                "& .MuiSelect-select": {
+                  padding: "0 !important", // Removes the inner padding
+                  minHeight: "auto", // Adjusts height to content
+                },
+                "& fieldset": {
+                  border: "none", // Removes the border from outlined variant
+                },
+              }}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+              value={currentPage}
+              onChange={(e) => switchPage(+e.target.value)}
+            >
+              {pages.map((_, index) => (
+                <MenuItem
+                  key={index}
+                  value={index}
+                  className="w-full p-0 m-0 select-none"
+                  sx={{ padding: 1 }}
+                  // style={{ padding: 0 }}
                 >
-                  Page {index + 1}
-                </Button>
-                <IconButton
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    deletePage(index);
-                  }}
-                >
-                  X
-                </IconButton>
-              </MenuItem>
-            ))}
-          </Select>
-          <Button onClick={addNewPage}>
-            <MdNoteAdd size={20} />
-          </Button>
-          <IconButton
-            className="tool"
-            disabled={undoRedoStack[currentPage].undoStack.length == 0}
-            onClick={undo}
-          >
-            <MdUndo className="tool" size={20} />
-          </IconButton>
-          <IconButton
-            disabled={undoRedoStack[currentPage].redoStack.length == 0}
-            onClick={redo}
-          >
-            <MdRedo size={20} />
-          </IconButton>
-          <Button onClick={toggleTool}>
-            {isEraser ? <MdDraw size={20} /> : <BsEraserFill size={20} />}
-          </Button>
-          <Button onClick={() => openDrawer()} style={{ color: "white " }}>
-            <BiArrowFromTop />
-          </Button>
-          <Button
-            onClick={() => deletePage(currentPage)}
-            style={{ color: "white ", backgroundColor: "GrayText" }}
-          >
-            Delete this page
-          </Button>
-          <Button
-            onClick={() => addPageAtPosition(currentPage)}
-            style={{ color: "white ", backgroundColor: "GrayText" }}
-          >
-            Add before this page
-          </Button>
-          <Select
-            className="custom-select"
-            style={{
-              border: "none", // Remove border
-              outline: "none", // Remove outline
-              width: 50,
-              fontSize: 5,
-            }}
-            value={isEraser ? eraserSize / 10 : strokeSize}
-            onChange={handleSizeChange}
-          >
-            {penSizes.map((size, index) => (
-              <MenuItem key={index} value={size}>
-                <div
-                  style={{
-                    width: size, // Width and height represent the pen size
-                    height: size,
-                    backgroundColor: "black",
-                    borderRadius: "50%", // Makes it look like a pen tip
-                  }}
-                ></div>
-              </MenuItem>
-            ))}
-          </Select>
-          {isEraser && (
-            <ColorPickerComponent color={color} setColor={setColor} />
-          )}
-          <div onClick={async () => await exportToPDF()}>Export</div>
+                  <div className="flex justify-between ">
+                    <Button
+                      style={{ width: "30%", fontSize: 12 }}
+                      className="text-sm"
+                      variant={index === currentPage ? "contained" : "outlined"}
+                      // onClick={() => switchPage(index)}
+                    >
+                      Page {index + 1}
+                    </Button>
+                    {index !== currentPage && (
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          deletePage(index);
+                        }}
+                        sx={{ padding: 0 }}
+                      >
+                        <CancelIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </div>
+                </MenuItem>
+              ))}
+            </Select>
+            <IconButton onClick={addNewPage} sx={{ color: "greenyellow" }}>
+              <MdNoteAdd size={25} />
+            </IconButton>
+            <IconButton
+              onClick={() => addPageAtPosition(currentPage)}
+              sx={{ color: "green" }}
+            >
+              <MdAddCard />
+              {/* Add before this page */}
+            </IconButton>
+            <IconButton
+              className="tool"
+              disabled={undoRedoStack[currentPage].undoStack.length == 0}
+              onClick={undo}
+              sx={{ color: "#3C6BB2" }}
+            >
+              <MdOutlineUndo className="tool" size={25} />
+            </IconButton>
+            <IconButton
+              disabled={undoRedoStack[currentPage].redoStack.length == 0}
+              onClick={redo}
+              sx={{ color: "#3C6BB2" }}
+            >
+              <MdRedo size={25} />
+            </IconButton>
+
+            {/* <Tooltip title="Clear Canvas"> */}
+            <IconButton onClick={() => clearScreen()} sx={{ color: "red" }}>
+              <CancelPresentationIcon sx={{ rotate: "90deg" }} />
+            </IconButton>
+            <IconButton
+              onClick={() => deletePage(currentPage)}
+              sx={{ color: "red" }}
+            >
+              <MdDelete size={25} />
+              {/* Delete this page */}
+            </IconButton>
+            {/* </Tooltip> */}
+          </div>
+          <div className="row2">
+            <IconButton
+              onClick={() => openDrawer()}
+              style={{ color: "royalblue" }}
+            >
+              {/* Color Picker */}
+              <ColorLensTwoToneIcon />
+            </IconButton>
+            {isEraser ? (
+              <IconButton sx={{ color: "pink" }} onClick={toggleTool}>
+                <MdDraw size={20} />
+              </IconButton>
+            ) : (
+              <IconButton onClick={toggleTool} sx={{ color: "yellow" }}>
+                <BsEraserFill size={20} />
+              </IconButton>
+            )}
+            <Select
+              className="custom-select "
+              style={{
+                border: "none", // Remove border
+                outline: "none", // Remove outline
+                width: 55,
+                // height:20
+                fontSize: 5,
+                background: "gray",
+              }}
+              sx={{
+                padding: 0, // Removes the outer padding
+                "& .MuiSelect-select": {
+                  display: "flex", // Flex display for content centering
+                  alignItems: "center", // Vertical centering
+                  justifyContent: "center", // Horizontal centering
+                  padding: 1, // Removes the inner padding
+                },
+                "& fieldset": {
+                  border: "none", // Removes the border from outlined variant
+                },
+              }}
+              MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+              value={isEraser ? eraserSize / 10 : strokeSize}
+              onChange={handleSizeChange}
+              renderValue={(val) => {
+                return (
+                  <div
+                    style={{
+                      width: val, // Width and height represent the pen size
+                      height: val,
+                      backgroundColor: "black",
+                      borderRadius: "50%", // Makes it look like a pen tip
+                    }}
+                  ></div>
+                );
+              }}
+            >
+              {penSizes.map((size, index) => (
+                <MenuItem key={index} value={size}>
+                  <div
+                    style={{
+                      width: size, // Width and height represent the pen size
+                      height: size,
+                      backgroundColor: "black",
+                      borderRadius: "50%", // Makes it look like a pen tip
+                    }}
+                  ></div>
+                </MenuItem>
+              ))}
+            </Select>
+            <IconButton
+              onClick={async () => await exportToPDF()}
+              sx={{ color: "#32A4DA" }}
+            >
+              <FileDownloadRoundedIcon />
+            </IconButton>
+          </div>
         </div>
       </div>
     </>

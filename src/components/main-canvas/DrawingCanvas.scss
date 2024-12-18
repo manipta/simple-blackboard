@@ -1,6 +1,9 @@
 button:focus {
-  color: #0078d4; /* Change the icon color on focus */
+  // color: #0078d4; /* Change the icon color on focus */
   outline: none; /* Remove the outline if needed */
+  text-decoration: none;
+  border: none;
+  box-shadow: none;
 }
 .tool {
   outline: none;
@@ -17,7 +20,7 @@ button {
 select {
   user-select: none; /* Prevents text selection */
   border: 1px solid #ccc;
-  padding: 8px;
+  padding: 2px;
   font-size: 16px;
   border-radius: 4px;
   background-color: #fff;
@@ -52,4 +55,12 @@ select {
 /* Custom focus style */
 select:focus {
   outline: none; /* Remove the default focus outline */
+}
+
+body {
+  background-color: #1f1f1f;
+}
+
+.MuiOutlinedInput-input {
+  padding: 0;
 }
