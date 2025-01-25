@@ -8,4 +8,8 @@ export enum UserType {
   Premium = "premium-user",
 }
 
-export const penSizes = [2, 4, 6, 8, 10, 12]; // Pen sizes in pixels
+export const STORAGE_FOLDER_NAME = "SimpleBlackBoard";
+
+export const APP_NAME = "Drawing Canvas";
+
+export const penSizes = [2, 4, 8, 12, 16]; // Pen sizes in pixels

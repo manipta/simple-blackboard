@@ -3,6 +3,10 @@ export interface Point {
   y: number;
 }
 
+export interface UndoRedoStack {
+  undoStack: string[];
+  redoStack: string[];
+}
 export interface DrawingTool {
   startDrawing: (
     canvasContext: CanvasRenderingContext2D,

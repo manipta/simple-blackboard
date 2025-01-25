@@ -1,7 +1,8 @@
 #root {
   margin: 0 auto;
-  /* background-color: gray; */
+  background-color: #1f1f1f;
   height: max-content;
+  width: 100%;
   /* padding: 2rem; */
   /* text-align: center; */
 }

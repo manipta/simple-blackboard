@@ -4,6 +4,7 @@ import { Route, Routes } from "react-router-dom";
 import RouteBackdrop from "../components/ui/RouteBackdrop";
 import Error404Component from "../components/ui/Error404Component";
 import DrawingCanvas from "../components/main-canvas/DrawingCanvas";
+import { ColorPaletteProvider } from "../components/color-picker/ColorPalette";
 const FreeUserRoutes = () => {
   return (
     <>
@@ -12,7 +13,9 @@ const FreeUserRoutes = () => {
           path="/"
           element={
             <Suspense fallback={<RouteBackdrop />}>
-              <DrawingCanvas />
+              <ColorPaletteProvider>
+                <DrawingCanvas />
+              </ColorPaletteProvider>
             </Suspense>
           }
         >

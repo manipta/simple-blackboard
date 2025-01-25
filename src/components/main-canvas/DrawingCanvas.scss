@@ -64,3 +64,13 @@ body {
 .MuiOutlinedInput-input {
   padding: 0;
 }
+/* Input fields themselves */
+.sketch-picker input {
+  background-color: #f0f0f0 !important; /* Light gray background */
+  color: #333 !important; /* Dark text color */
+  border: 1px solid #ccc !important; /* Subtle border */
+  border-radius: 5px !important; /* Rounded corners */
+  padding: 5px !important; /* Padding inside input fields */
+  font-size: 14px !important; /* Adjust font size */
+  outline: none !important; /* Remove focus outline */
+}
