@@ -30,44 +30,44 @@ const CanvasDataContext = createContext({
   isLoading: false,
   undoRedoStack: [{ undoStack: [] as string[], redoStack: [] as string[] }],
   canvasRef: null as unknown as React.MutableRefObject<HTMLCanvasElement>,
-  setPages: (([]: string[]) => {}) as React.Dispatch<
+  setPages: (([]: string[]) => { }) as React.Dispatch<
     React.SetStateAction<string[]>
   >,
-  setCurrentPage: ((_: number) => {}) as React.Dispatch<
+  setCurrentPage: ((_: number) => { }) as React.Dispatch<
     React.SetStateAction<number>
   >,
-  setStrokeSize: ((_: number) => {}) as React.Dispatch<
+  setStrokeSize: ((_: number) => { }) as React.Dispatch<
     React.SetStateAction<number>
   >,
-  setEraserSize: ((_: number) => {}) as React.Dispatch<
+  setEraserSize: ((_: number) => { }) as React.Dispatch<
     React.SetStateAction<number>
   >,
-  setIsEraser: ((_: boolean) => {}) as React.Dispatch<
+  setIsEraser: ((_: boolean) => { }) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
-  setShowPreview: ((_: boolean) => {}) as React.Dispatch<
+  setShowPreview: ((_: boolean) => { }) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
-  setShowMainMenu: ((_: boolean) => {}) as React.Dispatch<
+  setShowMainMenu: ((_: boolean) => { }) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
-  setLoading: ((_: boolean) => {}) as React.Dispatch<
+  setLoading: ((_: boolean) => { }) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
   isCanvasClear: () => false as boolean,
-  handleSizeChange: (_: any) => {},
+  handleSizeChange: (_: any) => { },
   getCanvasContext: () => null as CanvasRenderingContext2D | null,
   setUndoRedoStack: ((_: UndoRedoStack[]) => []) as React.Dispatch<
     React.SetStateAction<UndoRedoStack[]>
   >,
-  clearCanvas: () => {},
-  loadPage: (_: number, __?: string[]) => {},
-  resetCanvas: () => {},
-  toggleTool: () => {},
-  exportToPDF: () => {},
-  saveCurrentPage: () => {},
-  saveStateToUndoStack: () => {},
-  setShowImageMenu: ((_: boolean) => {}) as React.Dispatch<
+  clearCanvas: () => { },
+  loadPage: (_: number, __?: string[]) => { },
+  resetCanvas: () => { },
+  toggleTool: () => { },
+  exportToPDF: () => { },
+  saveCurrentPage: () => { },
+  saveStateToUndoStack: () => { },
+  setShowImageMenu: ((_: boolean) => { }) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
   showImageMenu: false,
@@ -99,15 +99,12 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
   const {
     defaultSavePath,
     setDefaultSavePath,
-    boardConfig,
     setBoardConfig,
-    chalkEffect,
-    chalkAnimation,
     setChalkAnimation,
     setChalkEffect,
   } = useSettings();
 
-  const { favouriteColorsList, setFavouriteColorsList } = useColorPalette();
+  const { setFavouriteColorsList } = useColorPalette();
 
   const canvasRef = useRef<HTMLCanvasElement>(
     null as unknown as HTMLCanvasElement
@@ -133,16 +130,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
   const [isLoading, setLoading] = useState(false);
   const pagesRef = useRef(pages);
   const undoRedoStackRef = useRef(undoRedoStack);
-  const eraserSizeRef = useRef(eraserSize);
-  const strokeSizeRef = useRef(strokeSize);
   const currentPageRef = useRef(currentPage);
-  const colorPaletteRef = useRef(favouriteColorsList);
-  const defaultStoragePath = useRef(defaultSavePath);
-  const boardConfigRef = useRef(boardConfig);
-  const chalkEffectAndAnimation = useRef({
-    chalkEffect: chalkEffect,
-    chalkAnimation: chalkAnimation,
-  });
 
   // Keep refs in sync so scheduleSave always has the latest values
   useEffect(() => {
