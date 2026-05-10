@@ -1,6 +1,7 @@
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useRef,
@@ -15,8 +16,7 @@ import { useDialogProvider } from "./DialogProvider";
 import { FileOpener } from "@capacitor-community/file-opener";
 import SaveDialog from "../../components/dialogs/SaveDialog";
 import { useSettings } from "./SettingsProvider";
-
-import { SecureStorage } from "@aparajita/capacitor-secure-storage";
+import { Preferences } from "@capacitor/preferences";
 import { LocalStorageKeys } from "../../constants";
 import { useColorPalette } from "../../components/color-picker/ColorPalette";
 const CanvasDataContext = createContext({
@@ -144,35 +144,32 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
     chalkAnimation: chalkAnimation,
   });
 
+  // Keep refs in sync so scheduleSave always has the latest values
   useEffect(() => {
     pagesRef.current = pages;
     undoRedoStackRef.current = undoRedoStack;
-    eraserSizeRef.current = eraserSize;
-    strokeSizeRef.current = strokeSize;
     currentPageRef.current = currentPage;
-    colorPaletteRef.current = favouriteColorsList;
-    defaultStoragePath.current = defaultSavePath;
-    boardConfigRef.current = boardConfig;
-    chalkEffectAndAnimation.current = {
-      chalkAnimation: chalkAnimation,
-      chalkEffect: chalkEffect,
-    };
-    console.log("haaa mai chala");
-    // setTimeout(() => {
-    //   setStorageItems();
-    // }, 500);
-  }, [
-    pages,
-    undoRedoStack,
-    eraserSize,
-    strokeSize,
-    currentPage,
-    favouriteColorsList,
-    defaultSavePath,
-    boardConfig,
-    chalkEffect,
-    chalkAnimation,
-  ]); // Update refs when state changes
+  }, [pages, undoRedoStack, currentPage]);
+
+  // Persist all canvas state to Preferences
+  const saveAllToStorage = useCallback(async (pgs: string[], urStack: UndoRedoStack[], currPage: number) => {
+    try {
+      await Preferences.set({ key: LocalStorageKeys.CANVAS_DATA, value: JSON.stringify(pgs) });
+      await Preferences.set({ key: LocalStorageKeys.UNDO_REDO_STACK, value: JSON.stringify(urStack) });
+      await Preferences.set({ key: LocalStorageKeys.CURRENT_PAGE, value: String(currPage) });
+    } catch (e) {
+      console.error("Error saving canvas state", e);
+    }
+  }, []);
+
+  // Debounced save: triggers 1s after the last change
+  const saveDebounceTimer = useRef<any>(null);
+  const scheduleSave = useCallback((pgs: string[], urStack: UndoRedoStack[], currPage: number) => {
+    if (saveDebounceTimer.current) clearTimeout(saveDebounceTimer.current);
+    saveDebounceTimer.current = setTimeout(() => {
+      saveAllToStorage(pgs, urStack, currPage);
+    }, 1000);
+  }, [saveAllToStorage]);
 
   useEffect(() => {
     // let Iid: string | number | NodeJS.Timeout | undefined;
@@ -235,71 +232,41 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
 
   const getStorageItems = async () => {
     setLoading(true);
-    const lastPages = await SecureStorage.getItem(LocalStorageKeys.CANVAS_DATA);
-    const colorPalette = await SecureStorage.getItem(
-      LocalStorageKeys.COLOR_PALETTE
-    );
-    const lastPage = await SecureStorage.getItem(LocalStorageKeys.CURRENT_PAGE);
-    const defaultSavePath = await SecureStorage.getItem(
-      LocalStorageKeys.DEFAULT_SAVE_PATH
-    );
-    const eraserSize = await SecureStorage.getItem(
-      LocalStorageKeys.ERASER_SIZE
-    );
-    const strokeSize = await SecureStorage.getItem(
-      LocalStorageKeys.STROKE_SIZE
-    );
-    console.log("lastPages", lastPages);
-    const undoRedoStack = await SecureStorage.getItem(
-      LocalStorageKeys.UNDO_REDO_STACK
-    );
-    const boardConfig = await SecureStorage.getItem(
-      LocalStorageKeys.BOARD_CONFIG
-    );
-    const chalkEffectAndAnimation = await SecureStorage.getItem(
-      LocalStorageKeys.CHALK_EFFECT_AND_ANIMATION
-    );
+    try {
+      const { value: lastPages } = await Preferences.get({ key: LocalStorageKeys.CANVAS_DATA });
+      const { value: colorPalette } = await Preferences.get({ key: LocalStorageKeys.COLOR_PALETTE });
+      const { value: lastPage } = await Preferences.get({ key: LocalStorageKeys.CURRENT_PAGE });
+      const { value: defaultSavePath } = await Preferences.get({ key: LocalStorageKeys.DEFAULT_SAVE_PATH });
+      const { value: eraserSize } = await Preferences.get({ key: LocalStorageKeys.ERASER_SIZE });
+      const { value: strokeSize } = await Preferences.get({ key: LocalStorageKeys.STROKE_SIZE });
+      const { value: undoRedoStack } = await Preferences.get({ key: LocalStorageKeys.UNDO_REDO_STACK });
+      const { value: boardConfig } = await Preferences.get({ key: LocalStorageKeys.BOARD_CONFIG });
+      const { value: chalkEffectAndAnimation } = await Preferences.get({ key: LocalStorageKeys.CHALK_EFFECT_AND_ANIMATION });
 
-    if (lastPages && undoRedoStack) {
-      console.log("line 115", JSON.parse(lastPages));
-      const a = JSON.parse(lastPages);
-      setPages(a);
-      lastPage ? setCurrentPage(parseInt(JSON.parse(lastPage))) : null;
-      setUndoRedoStack(JSON.parse(undoRedoStack));
-      loadPage(lastPage ? parseInt(JSON.parse(lastPage)) : currentPage, a);
-    }
-    defaultSavePath ? setDefaultSavePath(JSON.parse(defaultSavePath)) : null;
-    strokeSize ? setStrokeSize(parseInt(JSON.parse(strokeSize))) : null;
-    eraserSize ? setEraserSize(parseInt(JSON.parse(eraserSize))) : null;
-    colorPalette ? setFavouriteColorsList(JSON.parse(colorPalette)) : null;
-    boardConfig ? setBoardConfig(JSON.parse(boardConfig)) : null;
-    if (chalkEffectAndAnimation) {
-      const chalkEffectAndAnimationObject: {
-        chalkEffect: boolean;
-        chalkAnimation: boolean;
-      } = JSON.parse(chalkEffectAndAnimation);
-      setChalkEffect(chalkEffectAndAnimationObject.chalkEffect);
-      setChalkAnimation(chalkEffectAndAnimationObject.chalkAnimation);
+      if (lastPages && undoRedoStack) {
+        const parsedPages = JSON.parse(lastPages);
+        const parsedStack = JSON.parse(undoRedoStack);
+        const parsedPage = lastPage ? parseInt(lastPage, 10) : 0;
+        setPages(parsedPages);
+        setCurrentPage(parsedPage);
+        setUndoRedoStack(parsedStack);
+        loadPage(parsedPage, parsedPages);
+      }
+      if (defaultSavePath) setDefaultSavePath(JSON.parse(defaultSavePath));
+      if (strokeSize) setStrokeSize(parseInt(JSON.parse(strokeSize)));
+      if (eraserSize) setEraserSize(parseInt(JSON.parse(eraserSize)));
+      if (colorPalette) setFavouriteColorsList(JSON.parse(colorPalette));
+      if (boardConfig) setBoardConfig(JSON.parse(boardConfig));
+      if (chalkEffectAndAnimation) {
+        const parsed: { chalkEffect: boolean; chalkAnimation: boolean } = JSON.parse(chalkEffectAndAnimation);
+        setChalkEffect(parsed.chalkEffect);
+        setChalkAnimation(parsed.chalkAnimation);
+      }
+    } catch (e) {
+      console.error("Error loading canvas state", e);
     }
     setLoading(false);
   };
-  // const getStorageItems = async () => {
-  //   setLoading(true);
-  //   const lastPages = await SecureStorage.getItem(LocalStorageKeys.CANVAS_DATA);
-  //   console.log("lastPages", lastPages);
-  //   const undoRedoStack = await SecureStorage.getItem(
-  //     LocalStorageKeys.CANVAS_DATA + "undoRedoStack"
-  //   );
-
-  //   if (lastPages && undoRedoStack) {
-  //     console.log("line 115", JSON.parse(lastPages));
-  //     const a = JSON.parse(lastPages);
-  //     setPages(a);
-  //     setUndoRedoStack(JSON.parse(undoRedoStack));
-  //     loadPage(currentPage, a);
-  //   }
-  //   setLoading(false);
-  // };
 
   const handleSizeChange = (e: any) => {
     isEraser
@@ -404,13 +371,14 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
     }
   };
   const saveCurrentPage = () => {
-    console.log("savinggg...");
     const canvas = canvasRef.current;
     if (canvas) {
       const dataURL = canvas.toDataURL();
       setPages((prevPages) => {
         const updatedPages = [...prevPages];
         updatedPages[currentPage] = dataURL;
+        // Persist after updating pages
+        scheduleSave(updatedPages, undoRedoStackRef.current, currentPageRef.current);
         return updatedPages;
       });
     }
@@ -423,6 +391,8 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
         const updatedStack = [...prev];
         updatedStack[currentPage].undoStack.push(dataURL);
         updatedStack[currentPage].redoStack = []; // Clear redo stack
+        // Persist pages + new undo stack after every stroke
+        scheduleSave(pagesRef.current, updatedStack, currentPageRef.current);
         return updatedStack;
       });
     }

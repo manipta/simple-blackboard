@@ -1,12 +1,12 @@
-import { Switch, TextField, Tooltip } from "@mui/material";
+import { Switch, TextField } from "@mui/material";
 import { APP_NAME, boardColors } from "../../constants";
 import { useCanvasDataProvider } from "../../services/providers/CanvasDataProvider";
 import "./MainMenu.scss";
 import { useSettings } from "../../services/providers/SettingsProvider";
+import { useAdsSettings } from "../../services/providers/AdsSettingsProvider";
 import BgColorChoice from "./BgColorChoice";
-import { MdChevronLeft, MdChevronRight, MdInfoOutline } from "react-icons/md";
+import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { useState } from "react";
-import AdFreeTimer from "./AdFreeTimer";
 export interface BoardColorConfig {
   board: string;
   type: "image" | "color";
@@ -24,11 +24,8 @@ const MainMenu = () => {
     boardConfig,
     setBoardConfig,
   } = useSettings();
+  const { adFreeTimeLeft, showRewardedAd } = useAdsSettings();
   const [open, setOpen] = useState(false);
-
-  const handleClick = () => {
-    setOpen((prevState) => !prevState);
-  };
   return (
     <div
       className="w-full h-full flex flex-col gap-8"
@@ -130,35 +127,21 @@ const MainMenu = () => {
         </div>
       </div>
 
-      /** 
-       <div className="flex flex-col w-full">
-        <div className="flex flex-col items-center p-2 px-8 menu-item w-full">
-          <div className="flex justify-between items-center w-full">
-            <div>Ad-Free Timer</div>
-            <Tooltip
-              title={"Pre-Watch Ads to get ad-free time!"}
-              open={open}
-              disableHoverListener
-              >
-              <div onClick={handleClick}>
-                <MdInfoOutline size={25} />
-              </div>
-            </Tooltip>
-          </div>
-          <div className="w-full text-lg">
-            <AdFreeTimer />
-          </div>
-        </div>
-      </div> */
       <div className="flex flex-col w-full">
-        <div className="flex justify-between items-center p-2 px-8 menu-item">
-          <div>Feedback</div>
+        <div className="flex justify-between items-center p-2 px-8 menu-item cursor-pointer" onClick={showRewardedAd}>
+          <div>
+            <div className="font-bold">Watch Ad for Premium</div>
+            <div className="text-xs text-stone-300">Get 5 mins ad-free (Time left: {adFreeTimeLeft}s)</div>
+          </div>
           <div>
             <MdChevronRight size={40} />
           </div>
         </div>
-        <div className="flex justify-between items-center p-2 px-8 menu-item">
-          <div>About Me</div>
+      </div>
+
+      <div className="flex flex-col w-full">
+        <div className="flex justify-between items-center p-2 px-8 menu-item" onClick={() => { window.open("https://www.secretnotes.in", "_blank"); }}>
+          <div>More Apps by Manwiare</div>
           <div>
             <MdChevronRight size={40} />
           </div>

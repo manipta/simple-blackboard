@@ -22,6 +22,10 @@ export enum UserType {
 export const APP_NAME = "Drawing Canvas";
 export const STORAGE_FOLDER_NAME = APP_NAME ?? "SimpleBlackBoard";
 
+export const REWARD_AD_FREE_TIME_SECONDS = 300; // 5 minutes
+export const ADMOB_REWARDED_AD_ID = "ca-app-pub-3940256099942544/5224354917"; // Google Test ID
+export const ADMOB_BANNER_AD_ID = "ca-app-pub-3940256099942544/6300978111"; // Google Test ID
+
 export const penSizes = [2, 4, 8, 12, 16]; // Pen sizes in pixels
 
 export const boardColors: BoardColorConfig[] = [

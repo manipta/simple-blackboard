@@ -13,6 +13,7 @@ import {
 } from "react-icons/md";
 import { penSizes } from "../../constants";
 import { ColorPalette, useColorPalette } from "../color-picker/ColorPalette";
+import { Dialog } from "@capacitor/dialog";
 import { useCanvasDataProvider } from "../../services/providers/CanvasDataProvider";
 import CancelIcon from "@mui/icons-material/Cancel";
 import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
@@ -32,7 +33,6 @@ const BottomToolbar = () => {
     handleSizeChange,
     toggleTool,
     undoRedoStack,
-    isCanvasClear,
     setUndoRedoStack,
     canvasRef,
     setPages,
@@ -62,12 +62,17 @@ const BottomToolbar = () => {
       };
     }
   };
-  const clearScreen = () => {
-    if (isCanvasClear()) return;
-    saveStateToUndoStack();
+  const clearScreen = async () => {
+    const { value } = await Dialog.confirm({
+      title: 'Clear Screen',
+      message: 'Are you sure you want to clear the screen?',
+      okButtonTitle: 'Clear',
+      cancelButtonTitle: 'Cancel'
+    });
+    if (!value) return;
 
+    saveStateToUndoStack();
     clearCanvas();
-    saveCurrentPage();
   };
   const undo = () => {
     setUndoRedoStack((prev) => {
@@ -90,17 +95,23 @@ const BottomToolbar = () => {
 
   const restoreSnapshot = (snapshot: string) => {
     if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext("2d");
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
       const img = new Image();
       img.src = snapshot;
       img.onload = () => {
-        ctx?.clearRect(
-          0,
-          0,
-          canvasRef.current!.width,
-          canvasRef.current!.height
-        );
-        ctx?.drawImage(img, 0, 0);
+        // The context has scale(dpr, dpr) applied persistently.
+        // Reset to identity so we can draw at raw physical pixel coords,
+        // then restore the DPR scale for subsequent drawing operations.
+        const dpr = window.devicePixelRatio || 1;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // reset to identity
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        ctx.restore();
+        // Re-apply DPR scale so normal drawing still works correctly
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       };
     }
   };
@@ -121,13 +132,22 @@ const BottomToolbar = () => {
       return updatedStack;
     });
   };
-  const deletePage = (pageIndex: number) => {
+  const deletePage = async (pageIndex: number) => {
     console.log("Deleting page at index:", pageIndex);
 
     if (pages.length === 1) {
       alert("Ensures at least one page");
       return;
     }
+
+    const { value } = await Dialog.confirm({
+      title: 'Delete Page',
+      message: `Are you sure you want to delete Page ${pageIndex + 1}?`,
+      okButtonTitle: 'Delete',
+      cancelButtonTitle: 'Cancel'
+    });
+    if (!value) return;
+
 
     // Calculate updated pages and undoRedoStack **before updating state**
     const updatedPages = pages.filter((_, index) => index !== pageIndex);
@@ -238,15 +258,15 @@ const BottomToolbar = () => {
               value={index}
               className="w-full p-0 m-0 select-none "
               sx={{ padding: 1 }}
-              // style={{ padding: 0 }}
+            // style={{ padding: 0 }}
             >
               <div className="flex justify-between ">
                 <Button
                   className="flex items-center space-x-1 !min-w-[80%] !max-w-[80%] !bg-gray-700 px-3 py-2 !mr-2 !rounded-lg !text-white"
-                  // style={{ width: "30%", fontSize: 12 }}
-                  // className="text-sm"
-                  // variant={index === currentPage ? "contained" : "outlined"}
-                  // onClick={() => switchPage(index)}
+                // style={{ width: "30%", fontSize: 12 }}
+                // className="text-sm"
+                // variant={index === currentPage ? "contained" : "outlined"}
+                // onClick={() => switchPage(index)}
                 >
                   <span>Page {index + 1}</span>
                 </Button>
@@ -301,14 +321,14 @@ const BottomToolbar = () => {
         <IconButton
           onClick={() => clearScreen()}
           className="!text-red-400"
-          // sx={{ color: "red" }}
+        // sx={{ color: "red" }}
         >
           <CancelPresentationIcon sx={{ rotate: "90deg" }} />
         </IconButton>
         <IconButton
           className="!text-red-400"
           onClick={() => deletePage(currentPage)}
-          // sx={{ color: "red" }}
+        // sx={{ color: "red" }}
         >
           <MdDelete size={25} />
           {/* Delete this page */}

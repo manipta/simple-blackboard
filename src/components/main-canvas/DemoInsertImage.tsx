@@ -1,53 +1,44 @@
 import { useState, useRef, useEffect } from "react";
 import { useCanvasDataProvider } from "../../services/providers/CanvasDataProvider";
 import { loadImage } from "./DrawingCanvasService";
+import { MdCheck, MdClose } from "react-icons/md";
 
 const DraggableImage = ({
   src,
   onDelete,
-  img,
   canvasWidth,
   canvasHeight,
 }: any) => {
   const { getCanvasContext, canvasRef } = useCanvasDataProvider();
   const context = getCanvasContext();
   const [position, setPosition] = useState({ x: 50, y: 50 });
-  const [size, setSize] = useState({ width: img.width, height: img.height });
+  const [size, setSize] = useState({ width: 0, height: 0 });
   const [dragging, setDragging] = useState(false);
   const [resizing, setResizing] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const imgRef = useRef(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const dpr = window.devicePixelRatio || 1;
     (async () => {
       let newImage = await loadImage(src);
       let largerRatio = 1;
-      if (canvasRef.current.width * 0.9 < newImage.naturalWidth * dpr) {
-        largerRatio = parseInt(
-          (
-            (newImage.naturalWidth * dpr) /
-            (canvasRef.current.width * 0.9)
-          ).toFixed(0)
-        );
+      if (canvasWidth * 0.9 < newImage.naturalWidth) {
+        largerRatio = newImage.naturalWidth / (canvasWidth * 0.9);
       }
-      if (canvasRef.current.height * 0.9 < newImage.naturalHeight * dpr) {
+      if (canvasHeight * 0.9 < newImage.naturalHeight) {
         largerRatio = Math.max(
           largerRatio,
-          parseInt(
-            (
-              (newImage.naturalHeight * dpr) /
-              (canvasRef.current.height * 0.9)
-            ).toFixed(0)
-          )
+          newImage.naturalHeight / (canvasHeight * 0.9)
         );
       }
       setSize({
-        width: (newImage.naturalWidth * dpr) / largerRatio,
-        height: (newImage.naturalHeight * dpr) / largerRatio,
+        width: newImage.naturalWidth / largerRatio,
+        height: newImage.naturalHeight / largerRatio,
       });
+      setLoaded(true);
     })();
-  }, []);
+  }, [src, canvasWidth, canvasHeight]);
 
   const drawImage = async () => {
     let newImage = await loadImage(src);
@@ -93,8 +84,8 @@ const DraggableImage = ({
 
   const constrainSize = (newWidth: number, newHeight: number) => {
     // Ensure minimum size
-    const minWidth = 20;
-    const minHeight = 20;
+    const minWidth = 40;
+    const minHeight = 40;
 
     // Ensure size doesn't exceed canvas boundaries
     const maxWidth = canvasWidth - position.x;
@@ -170,6 +161,8 @@ const DraggableImage = ({
     setResizing(false);
   };
 
+  if (!loaded) return null;
+
   return (
     <div
       style={{
@@ -179,6 +172,9 @@ const DraggableImage = ({
         width: size.width,
         height: size.height,
         cursor: dragging ? "grabbing" : "grab",
+        border: "2px dashed rgba(255, 255, 255, 0.4)",
+        boxSizing: "border-box",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.2)",
       }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -186,6 +182,7 @@ const DraggableImage = ({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      className="z-20 rounded-md bg-white/5 backdrop-blur-[2px]"
     >
       <img
         ref={imgRef}
@@ -193,38 +190,43 @@ const DraggableImage = ({
         alt=""
         style={{ width: "100%", height: "100%", userSelect: "none" }}
         draggable={false}
+        className="rounded-md object-contain pointer-events-none"
       />
       <div
-        style={{
-          position: "absolute",
-          bottom: 0,
-          right: 0,
-          width: 10,
-          height: 10,
-          background: "red",
-          cursor: "nwse-resize",
-        }}
-        onMouseDown={() => setResizing(true)}
-        onTouchStart={() => setResizing(true)}
+        className="absolute bottom-[-8px] right-[-8px] w-5 h-5 bg-[#3b82f6] rounded-full cursor-nwse-resize border-2 border-white shadow-lg z-30 transition-transform hover:scale-110 active:scale-95"
+        onMouseDown={(e) => { e.stopPropagation(); setResizing(true); }}
+        onTouchStart={(e) => { e.stopPropagation(); setResizing(true); }}
       ></div>
-      <button
-        style={{ position: "absolute", top: -20, left: 0 }}
-        onClick={drawImage}
-      >
-        ✅
-      </button>
-      <button
-        style={{ position: "absolute", top: -20, right: 0 }}
-        onClick={onDelete}
-      >
-        ❌
-      </button>
+      <div className="absolute -top-16 right-0 flex gap-3 z-30">
+        <button
+          className="flex items-center justify-center w-14 h-14 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/30 rounded-full text-white shadow-lg transition-transform hover:scale-110"
+          onClick={(e) => { e.stopPropagation(); onDelete(false); }}
+        >
+          <MdClose size={32} />
+        </button>
+        <button
+          className="flex items-center justify-center w-14 h-14 bg-green-500/80 hover:bg-green-400 backdrop-blur-md border border-green-300/50 rounded-full text-white shadow-lg transition-transform hover:scale-110"
+          onClick={async (e) => { e.stopPropagation(); await drawImage(); onDelete(true); }}
+        >
+          <MdCheck size={32} />
+        </button>
+      </div>
     </div>
   );
 };
 
 const Canvas = ({ width, height }: any) => {
   const [images, setImages] = useState<any>([]);
+  const { setShowImageMenu, saveStateToUndoStack } = useCanvasDataProvider();
+  const hasTriggeredPicker = useRef(false);
+
+  useEffect(() => {
+    // Auto trigger file picker when mounted and no images are present
+    if (images.length === 0 && !hasTriggeredPicker.current) {
+      hasTriggeredPicker.current = true;
+      document.getElementById('hidden-image-input')?.click();
+    }
+  }, []);
 
   const handleImageUpload = (event: any) => {
     const file = event.target.files[0];
@@ -234,7 +236,14 @@ const Canvas = ({ width, height }: any) => {
         setImages([...images, { id: Date.now(), src: reader.result }]);
       };
       reader.readAsDataURL(file);
+    } else {
+      // If user cancelled, they can click image icon again or we can auto-close
+      if (images.length === 0) {
+        setShowImageMenu(false);
+      }
     }
+    // reset input so same file can be chosen again
+    event.target.value = null;
   };
 
   return (
@@ -243,10 +252,17 @@ const Canvas = ({ width, height }: any) => {
         position: "absolute",
         width: width,
         height: height,
-        border: "1px solid black",
+        pointerEvents: images.length > 0 ? "auto" : "none",
+        zIndex: images.length > 0 ? 10 : -1,
       }}
     >
-      <input type="file" onChange={handleImageUpload} />
+      <input
+        id="hidden-image-input"
+        type="file"
+        accept="image/*"
+        style={{ display: "none" }}
+        onChange={handleImageUpload}
+      />
       {images.map((img: any) => (
         <DraggableImage
           key={img.id}
@@ -254,7 +270,15 @@ const Canvas = ({ width, height }: any) => {
           img={img}
           canvasWidth={width}
           canvasHeight={height}
-          onDelete={() => setImages(images.filter((i: any) => i.id !== img.id))}
+          onDelete={(stamped: boolean) => {
+            if (stamped) {
+              saveStateToUndoStack(); // Save state after drawing image
+            }
+            setImages(images.filter((i: any) => i.id !== img.id));
+            if (stamped) {
+              setShowImageMenu(false); // Auto close menu after resolving the image
+            }
+          }}
         />
       ))}
     </div>

@@ -91,6 +91,15 @@ const DrawingCanvas = () => {
   };
 
   useEffect(() => {
+    const canvasElement = canvasRef.current;
+    if (canvasElement) {
+      const ctx = canvasElement.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      // Reset transform before scaling to prevent compounding if useEffect runs twice
+      ctx?.setTransform(1, 0, 0, 1, 0, 0);
+      ctx?.scale(dpr, dpr);
+    }
+
     if (pages.length === 0) {
       setPages([""]);
     }
@@ -99,7 +108,6 @@ const DrawingCanvas = () => {
 
     const handleTouch = (e: TouchEvent) => e.preventDefault();
 
-    const canvasElement = canvasRef.current;
     if (canvasElement) {
       canvasElement.addEventListener("touchstart", handleTouch, {
         passive: false,
@@ -350,22 +358,12 @@ const DrawingCanvas = () => {
                 <canvas
                   id="myCanvas"
                   ref={canvasRef}
-                  width={windowWidth.current - 16}
-                  height={windowHeight.current - 120}
-                  // style={{
-                  //   // position: "static",
-                  //   boxShadow: "5px 5px 2px black",
-                  //   borderRadius: "8px",
-                  //   border: "8px solid #bc8c5c",
-                  //   background:
-                  //   boardConfig.type == "image"
-                  //       ? `url(${boardConfig.board})`
-                  //       : boardConfig.board,
-                  //   marginTop: 0,
-                  //   // backgroundColor: "red",
-                  //   // backgroundColor: "#274c43",
-                  //   cursor: `none`,
-                  // }}
+                  width={(windowWidth.current - 16) * (window.devicePixelRatio || 1)}
+                  height={(windowHeight.current - 120) * (window.devicePixelRatio || 1)}
+                  style={{
+                     width: `${windowWidth.current - 16}px`,
+                     height: `${windowHeight.current - 120}px`,
+                  }}
                 ></canvas>
               </div>
             </div>
