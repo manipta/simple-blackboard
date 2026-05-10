@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aparajita/capacitor-secure-storage": "^6.0.1",
     "@capacitor-community/file-opener": "^6.0.1",
     "@capacitor/android": "^6.2.0",
     "@capacitor/cli": "^6.2.0",
@@ -18,13 +19,13 @@
     "@capacitor/filesystem": "^6.0.2",
     "@capacitor/status-bar": "^6.0.2",
     "@capawesome/capacitor-file-picker": "^6.2.0",
-    "@dotlottie/react-player": "^1.6.19",
     "@emotion/react": "^11.13.5",
     "@emotion/styled": "^11.13.5",
     "@mui/icons-material": "^6.2.1",
     "@mui/material": "^6.1.8",
     "@radial-color-picker/react-color-picker": "^4.0.1",
     "jspdf": "^2.5.2",
+    "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-color": "^2.19.3",
     "react-dom": "^18.3.1",

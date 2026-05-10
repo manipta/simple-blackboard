@@ -11,10 +11,11 @@ import BottomToolbar from "../bottom-toolbar/BottomToolbar";
 import PagePreviewer from "../pages-previewer/PagePreviewer";
 import MainMenu from "../main-menu/MainMenu";
 import { useSettings } from "../../services/providers/SettingsProvider";
+import DemoInsertImage from "./DemoInsertImage";
 const DrawingCanvas = () => {
   // Theme Config
   // -------
-  const { chalkEffect, chalkAnimation } = useSettings();
+  const { chalkEffect, chalkAnimation, boardConfig } = useSettings();
   const penSpecialEffect = (
     canvasContext: CanvasRenderingContext2D,
     xStart: number,
@@ -36,7 +37,7 @@ const DrawingCanvas = () => {
   const penStroke = currentTheme.penStroke;
   const pen = currentTheme.pen;
   // const eraser = currentTheme.duster;
-  const boardBackground = currentTheme.board;
+  // const boardBackground = currentTheme.board;
   // -------
 
   // const [line, setLine] = useState<Line>({ points: [] });
@@ -64,9 +65,30 @@ const DrawingCanvas = () => {
     saveCurrentPage,
     showPreview,
     showMainMenu,
+    isLoading,
+    showImageMenu,
   } = useCanvasDataProvider();
 
   const { favouriteColorsList, index } = useColorPalette();
+
+  const clearCircle = (
+    context: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    radius: number
+  ) => {
+    context.save(); // Save the current state
+    context.arc(x, y, radius, 0, 2 * Math.PI, false);
+    context.clip();
+    context.clearRect(
+      x - radius - 1,
+      y - radius - 1,
+      radius * 2 + 2,
+      radius * 2 + 2
+    );
+
+    context.restore(); // Restore state to avoid affecting other drawings
+  };
 
   useEffect(() => {
     if (pages.length === 0) {
@@ -111,17 +133,17 @@ const DrawingCanvas = () => {
       canvasContext.beginPath();
       canvasContext.moveTo(point1.x, point1.y);
       canvasContext.lineTo(point2.x, point2.y);
-
       if (isEraser) {
         // canvasContext.strokeStyle = "red";
         // canvasContext.lineWidth = 1;
-        canvasContext.lineCap = "round";
-        canvasContext.clearRect(
-          x - eraserSize / 2,
-          y - eraserSize / 2,
-          eraserSize,
-          eraserSize
-        ); // Erase
+        canvasContext.lineCap = "round" as CanvasLineCap;
+        // canvasContext.clearRect(
+        //   x - eraserSize / 2,
+        //   y - eraserSize / 2,
+        //   eraserSize,
+        //   eraserSize
+        // ); // Erase
+        clearCircle(canvasContext, point1.x, point1.y, eraserSize / 2);
       } else {
         canvasContext.strokeStyle = favouriteColorsList[index];
         canvasContext.lineWidth = strokeSize;
@@ -209,71 +231,6 @@ const DrawingCanvas = () => {
     isDrawing.current = false;
   };
 
-  // const exportToPDF = async () => {
-  //   // ... (Your logic to prepare pages)
-
-  //   if (pages.length === 0) {
-  //     console.error("No pages to export");
-  //     return;
-  //   }
-
-  //   const pdfData = await Plugins.JSPDF.create({
-  //     orientation: "portrait", // Or "landscape"
-  //     unit: "mm", // Or "pt", "in", "cm"
-  //     format: "a4", // Or other supported formats
-  //     // ... other options specific to the plugin
-  //   });
-
-  //   // Process pages sequentially using the plugin's methods
-  //   for (let index = 0; index < pages.length; index++) {
-  //     try {
-  //       const imageData = await Plugins.Storage.get({ key: pages[index] }); // Assuming pages contain base64 encoded images
-  //       await Plugins.JSPDF.addImage(pdfData, imageData.value, index); // Add image to PDF using the plugin
-  //       // ... other actions specific to the plugin
-  //     } catch (error) {
-  //       console.error("Error generating PDF:", error);
-  //     }
-  //   }
-
-  //   // Save the PDF using the plugin's methods
-  //   await Plugins.JSPDF.save(pdfData, "multi-page.pdf");
-  // };
-  // const exportCanvasToPDF = async () => {
-  //   try {
-  //     // Load external libraries dynamically
-  //     await loadScript(
-  //       "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
-  //     );
-  //     await loadScript(
-  //       "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"
-  //     );
-
-  //     const canvas = document.getElementById("myCanvas") as HTMLCanvasElement;
-
-  //     if (!canvas) {
-  //       console.error("Canvas element not found");
-  //       return;
-  //     }
-
-  //     // Access loaded libraries
-  //     const html2canvas = (window as any).html2canvas;
-  //     const { jsPDF } = (window as any).jspdf;
-
-  //     // Convert canvas to image
-  //     const canvasImage = await html2canvas(canvas);
-  //     const imageData = canvasImage.toDataURL("image/png");
-
-  //     // Create PDF
-  //     const pdf = new jsPDF("p", "mm", "a4");
-  //     const pdfWidth = 210;
-  //     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-  //     pdf.addImage(imageData, "PNG", 0, 0, pdfWidth, pdfHeight);
-  //     pdf.save("canvas.pdf");
-  //   } catch (error) {
-  //     console.error("Error exporting to PDF:", error);
-  //   }
-  // };
   if (showPreview)
     return (
       <div>
@@ -281,11 +238,16 @@ const DrawingCanvas = () => {
       </div>
     );
   return (
-    <div className="flex flex-col w-full">
+    <div className="flex flex-col w-full h-screen">
       {showMainMenu ? (
-        <MainMenu></MainMenu>
+        <MainMenu />
       ) : (
         <div>
+          {isLoading && (
+            <div className="h-full w-full content-center text-center bg-black text-white text-2xl">
+              Loading...
+            </div>
+          )}
           <DrawerShell
             height={370}
             children={undefined}
@@ -296,11 +258,16 @@ const DrawingCanvas = () => {
                 </div>
               </div>
             }
-          ></DrawerShell>
+          />
+
           <div
             className="flex flex-col m-0 p-0 "
             onMouseDown={(e) => handleMouseDown(e)}
-            onMouseMove={(e) => handleMouseMove(e)}
+            onMouseMove={(e) => {
+              handleMouseMove(e);
+              e.preventDefault();
+              // e.stopPropagation();
+            }}
             onMouseUp={() => handleMouseUp()}
             onMouseLeave={() => {
               handleMouseUp();
@@ -310,65 +277,97 @@ const DrawingCanvas = () => {
               fancyCursor.current = true;
             }}
             onTouchStart={(e: any) => handleMouseDown(e)}
-            onTouchMove={(e: any) => handleTouchMove(e)}
+            onTouchMove={(e: any) => {
+              handleTouchMove(e);
+              e.preventDefault();
+              // e.stopPropagation();
+            }}
             onTouchEnd={() => handleMouseUp()}
             onTouchCancel={() => handleMouseUp()}
           >
-            <div>
-              {isEraser && isDrawing.current && (
-                <div
-                  onDrag={(e) => {
-                    e.preventDefault();
-                  }}
-                  onClick={() => {}}
-                  className="fixed border-2 border-white"
-                  style={{
-                    position: "fixed",
-                    width: eraserSize,
-                    height: eraserSize,
-                    left: `${x - eraserSize / 2}px`,
-                    top: `${y - eraserSize / 2}px`,
-                  }}
-                />
+            <div
+              style={{
+                // position: "static",
+                boxShadow: "5px 5px 2px black",
+                borderRadius: "8px",
+                border: "8px solid #bc8c5c",
+                background:
+                  boardConfig.type == "image"
+                    ? `url(${boardConfig.board})`
+                    : boardConfig.board,
+                marginTop: 0,
+                // backgroundColor: "red",
+                // backgroundColor: "#274c43",
+                cursor: `none`,
+              }}
+            >
+              {showImageMenu && (
+                <div className=" absolute">
+                  <DemoInsertImage
+                    width={windowWidth.current - 16}
+                    height={windowHeight.current - 120}
+                  />
+                </div>
               )}
-              {isDrawing.current && (
-                <div
-                  className={`custom-cursor fixed z-10 w-10 h-12 select-none no-drag ${
-                    isEraser ? "" : null
-                  } `}
-                  style={{
-                    backgroundImage: `url(${
-                      chalkAnimation
-                        ? isEraser
-                          ? "/assets/duster2.png"
-                          : pen
-                        : ""
-                    })`,
-                    backgroundSize: "contain",
-                    backgroundRepeat: "no-repeat",
-                    left: `${x + window.innerWidth * 0.001}px`,
-                    top: `${y + window.innerWidth * 0.001}px`,
-                    cursor: `none`,
-                  }}
-                />
-              )}
-              <canvas
-                id="myCanvas"
-                ref={canvasRef}
-                width={windowWidth.current - 16}
-                height={windowHeight.current - 120}
-                style={{
-                  // position: "static",
-                  boxShadow: "5px 5px 2px black",
-                  borderRadius: "5px",
-                  border: "8px solid #bc8c5c",
-                  background: `url(${boardBackground})`,
-                  marginTop: 0,
-                  backgroundColor: "red",
-                  // backgroundColor: "#274c43",
-                  cursor: `none`,
-                }}
-              ></canvas>
+              <div>
+                {isEraser && isDrawing.current && (
+                  <div
+                    onDrag={(e) => {
+                      e.preventDefault();
+                    }}
+                    onClick={() => {}}
+                    className="fixed border-2 border-white rounded-full"
+                    style={{
+                      position: "fixed",
+                      width: eraserSize,
+                      height: eraserSize,
+                      left: `${x - eraserSize / 2}px`,
+                      top: `${y - eraserSize / 2}px`,
+                    }}
+                  />
+                )}
+                {isDrawing.current && (
+                  <div
+                    className={`custom-cursor fixed z-10 w-10 h-12 select-none no-drag ${
+                      isEraser ? "" : null
+                    } `}
+                    style={{
+                      backgroundImage: `url(${
+                        chalkAnimation
+                          ? isEraser
+                            ? "/assets/duster2.png"
+                            : pen
+                          : ""
+                      })`,
+                      backgroundSize: "contain",
+                      backgroundRepeat: "no-repeat",
+                      left: `${x + window.innerWidth * 0.001}px`,
+                      top: `${y + window.innerWidth * 0.001}px`,
+                      cursor: `none`,
+                    }}
+                  />
+                )}
+                <canvas
+                  id="myCanvas"
+                  ref={canvasRef}
+                  width={windowWidth.current - 16}
+                  height={windowHeight.current - 120}
+                  // style={{
+                  //   // position: "static",
+                  //   boxShadow: "5px 5px 2px black",
+                  //   borderRadius: "8px",
+                  //   border: "8px solid #bc8c5c",
+                  //   background:
+                  //   boardConfig.type == "image"
+                  //       ? `url(${boardConfig.board})`
+                  //       : boardConfig.board,
+                  //   marginTop: 0,
+                  //   // backgroundColor: "red",
+                  //   // backgroundColor: "#274c43",
+                  //   cursor: `none`,
+                  // }}
+                ></canvas>
+              </div>
             </div>
           </div>
           <div className="flex flex-col">

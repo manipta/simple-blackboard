@@ -1,4 +1,11 @@
-import { createContext, ReactNode, useContext, useRef, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { UndoRedoStack } from "../../interfaces/main-canvas/DrawingTool";
 import { Directory, Filesystem } from "@capacitor/filesystem";
 import { Dialog } from "@capacitor/dialog";
@@ -8,6 +15,10 @@ import { useDialogProvider } from "./DialogProvider";
 import { FileOpener } from "@capacitor-community/file-opener";
 import SaveDialog from "../../components/dialogs/SaveDialog";
 import { useSettings } from "./SettingsProvider";
+
+import { SecureStorage } from "@aparajita/capacitor-secure-storage";
+import { LocalStorageKeys } from "../../constants";
+import { useColorPalette } from "../../components/color-picker/ColorPalette";
 const CanvasDataContext = createContext({
   pages: [] as string[],
   currentPage: 0,
@@ -16,6 +27,7 @@ const CanvasDataContext = createContext({
   isEraser: false,
   showPreview: false,
   showMainMenu: false,
+  isLoading: false,
   undoRedoStack: [{ undoStack: [] as string[], redoStack: [] as string[] }],
   canvasRef: null as unknown as React.MutableRefObject<HTMLCanvasElement>,
   setPages: (([]: string[]) => {}) as React.Dispatch<
@@ -39,6 +51,9 @@ const CanvasDataContext = createContext({
   setShowMainMenu: ((_: boolean) => {}) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
+  setLoading: ((_: boolean) => {}) as React.Dispatch<
+    React.SetStateAction<boolean>
+  >,
   isCanvasClear: () => false as boolean,
   handleSizeChange: (_: any) => {},
   getCanvasContext: () => null as CanvasRenderingContext2D | null,
@@ -46,12 +61,16 @@ const CanvasDataContext = createContext({
     React.SetStateAction<UndoRedoStack[]>
   >,
   clearCanvas: () => {},
-  loadPage: (_: number) => {},
+  loadPage: (_: number, __?: string[]) => {},
   resetCanvas: () => {},
   toggleTool: () => {},
   exportToPDF: () => {},
   saveCurrentPage: () => {},
   saveStateToUndoStack: () => {},
+  setShowImageMenu: ((_: boolean) => {}) as React.Dispatch<
+    React.SetStateAction<boolean>
+  >,
+  showImageMenu: false,
 });
 
 // function loadScript(src: string): Promise<void> {
@@ -65,13 +84,39 @@ const CanvasDataContext = createContext({
 //   });
 // }
 
+// interface LastSavedConfig {
+//   pages: string[];
+//   undoRedoStack: UndoRedoStack[];
+//   eraserSize: number;
+//   strokeSize: number;
+//   currentPage: number;
+//   defaultSavePath: string;
+//   colorPalette: string[];
+// }
+
 const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
   const { openDialog } = useDialogProvider();
-  const { defaultSavePath } = useSettings();
+  const {
+    defaultSavePath,
+    setDefaultSavePath,
+    boardConfig,
+    setBoardConfig,
+    chalkEffect,
+    chalkAnimation,
+    setChalkAnimation,
+    setChalkEffect,
+  } = useSettings();
+
+  const { favouriteColorsList, setFavouriteColorsList } = useColorPalette();
+
   const canvasRef = useRef<HTMLCanvasElement>(
     null as unknown as HTMLCanvasElement
   );
-  const [pages, setPages] = useState<string[]>([]); // Store canvas data as Base64
+
+  // const [lastSavedConfig, setLastSavedConfig] =
+  //   useState<LastSavedConfig | null>(null);
+
+  const [pages, setPages] = useState<string[]>([""]); // Store canvas data as Base64
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [strokeSize, setStrokeSize] = useState(8);
   const [eraserSize, setEraserSize] = useState(80);
@@ -79,10 +124,183 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
 
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [showMainMenu, setShowMainMenu] = useState<boolean>(false);
+  const [showImageMenu, setShowImageMenu] = useState<boolean>(false);
   // State with a default color (HSL with Alpha)
   const [undoRedoStack, setUndoRedoStack] = useState<UndoRedoStack[]>([
     { undoStack: [], redoStack: [] },
   ]);
+
+  const [isLoading, setLoading] = useState(false);
+  const pagesRef = useRef(pages);
+  const undoRedoStackRef = useRef(undoRedoStack);
+  const eraserSizeRef = useRef(eraserSize);
+  const strokeSizeRef = useRef(strokeSize);
+  const currentPageRef = useRef(currentPage);
+  const colorPaletteRef = useRef(favouriteColorsList);
+  const defaultStoragePath = useRef(defaultSavePath);
+  const boardConfigRef = useRef(boardConfig);
+  const chalkEffectAndAnimation = useRef({
+    chalkEffect: chalkEffect,
+    chalkAnimation: chalkAnimation,
+  });
+
+  useEffect(() => {
+    pagesRef.current = pages;
+    undoRedoStackRef.current = undoRedoStack;
+    eraserSizeRef.current = eraserSize;
+    strokeSizeRef.current = strokeSize;
+    currentPageRef.current = currentPage;
+    colorPaletteRef.current = favouriteColorsList;
+    defaultStoragePath.current = defaultSavePath;
+    boardConfigRef.current = boardConfig;
+    chalkEffectAndAnimation.current = {
+      chalkAnimation: chalkAnimation,
+      chalkEffect: chalkEffect,
+    };
+    console.log("haaa mai chala");
+    // setTimeout(() => {
+    //   setStorageItems();
+    // }, 500);
+  }, [
+    pages,
+    undoRedoStack,
+    eraserSize,
+    strokeSize,
+    currentPage,
+    favouriteColorsList,
+    defaultSavePath,
+    boardConfig,
+    chalkEffect,
+    chalkAnimation,
+  ]); // Update refs when state changes
+
+  useEffect(() => {
+    // let Iid: string | number | NodeJS.Timeout | undefined;
+    const func = async () => {
+      await getStorageItems();
+      // Iid = setInterval(setStorageItems, 800);
+    };
+
+    func();
+    // return () => clearInterval(Iid); // Cleanup on unmount
+  }, []);
+
+  // const setStorageItems = async () => {
+  //   if (isLoading) return;
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.CANVAS_DATA,
+  //     JSON.stringify(pagesRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.UNDO_REDO_STACK,
+  //     JSON.stringify(undoRedoStackRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.COLOR_PALETTE,
+  //     JSON.stringify(colorPaletteRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.CURRENT_PAGE,
+  //     JSON.stringify(currentPageRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.DEFAULT_SAVE_PATH,
+  //     JSON.stringify(defaultStoragePath.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.ERASER_SIZE,
+  //     JSON.stringify(eraserSizeRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.STROKE_SIZE,
+  //     JSON.stringify(strokeSizeRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.BOARD_CONFIG,
+  //     JSON.stringify(boardConfigRef.current)
+  //   );
+
+  //   await SecureStorage.setItem(
+  //     LocalStorageKeys.CHALK_EFFECT_AND_ANIMATION,
+  //     JSON.stringify(chalkEffectAndAnimation.current)
+  //   );
+  // };
+
+  const getStorageItems = async () => {
+    setLoading(true);
+    const lastPages = await SecureStorage.getItem(LocalStorageKeys.CANVAS_DATA);
+    const colorPalette = await SecureStorage.getItem(
+      LocalStorageKeys.COLOR_PALETTE
+    );
+    const lastPage = await SecureStorage.getItem(LocalStorageKeys.CURRENT_PAGE);
+    const defaultSavePath = await SecureStorage.getItem(
+      LocalStorageKeys.DEFAULT_SAVE_PATH
+    );
+    const eraserSize = await SecureStorage.getItem(
+      LocalStorageKeys.ERASER_SIZE
+    );
+    const strokeSize = await SecureStorage.getItem(
+      LocalStorageKeys.STROKE_SIZE
+    );
+    console.log("lastPages", lastPages);
+    const undoRedoStack = await SecureStorage.getItem(
+      LocalStorageKeys.UNDO_REDO_STACK
+    );
+    const boardConfig = await SecureStorage.getItem(
+      LocalStorageKeys.BOARD_CONFIG
+    );
+    const chalkEffectAndAnimation = await SecureStorage.getItem(
+      LocalStorageKeys.CHALK_EFFECT_AND_ANIMATION
+    );
+
+    if (lastPages && undoRedoStack) {
+      console.log("line 115", JSON.parse(lastPages));
+      const a = JSON.parse(lastPages);
+      setPages(a);
+      lastPage ? setCurrentPage(parseInt(JSON.parse(lastPage))) : null;
+      setUndoRedoStack(JSON.parse(undoRedoStack));
+      loadPage(lastPage ? parseInt(JSON.parse(lastPage)) : currentPage, a);
+    }
+    defaultSavePath ? setDefaultSavePath(JSON.parse(defaultSavePath)) : null;
+    strokeSize ? setStrokeSize(parseInt(JSON.parse(strokeSize))) : null;
+    eraserSize ? setEraserSize(parseInt(JSON.parse(eraserSize))) : null;
+    colorPalette ? setFavouriteColorsList(JSON.parse(colorPalette)) : null;
+    boardConfig ? setBoardConfig(JSON.parse(boardConfig)) : null;
+    if (chalkEffectAndAnimation) {
+      const chalkEffectAndAnimationObject: {
+        chalkEffect: boolean;
+        chalkAnimation: boolean;
+      } = JSON.parse(chalkEffectAndAnimation);
+      setChalkEffect(chalkEffectAndAnimationObject.chalkEffect);
+      setChalkAnimation(chalkEffectAndAnimationObject.chalkAnimation);
+    }
+    setLoading(false);
+  };
+  // const getStorageItems = async () => {
+  //   setLoading(true);
+  //   const lastPages = await SecureStorage.getItem(LocalStorageKeys.CANVAS_DATA);
+  //   console.log("lastPages", lastPages);
+  //   const undoRedoStack = await SecureStorage.getItem(
+  //     LocalStorageKeys.CANVAS_DATA + "undoRedoStack"
+  //   );
+
+  //   if (lastPages && undoRedoStack) {
+  //     console.log("line 115", JSON.parse(lastPages));
+  //     const a = JSON.parse(lastPages);
+  //     setPages(a);
+  //     setUndoRedoStack(JSON.parse(undoRedoStack));
+  //     loadPage(currentPage, a);
+  //   }
+  //   setLoading(false);
+  // };
+
   const handleSizeChange = (e: any) => {
     isEraser
       ? setEraserSize(e.target.value * 10)
@@ -133,24 +351,56 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
     clearCanvas();
     loadPage(currentPage);
   };
-  const loadPage = (pageIndex: number) => {
+
+  const loadPage = (pageIndex: number, data?: string[]) => {
     console.log("Loading", pageIndex);
     console.log(pages);
     const canvasContext = getCanvasContext();
     if (canvasContext) {
-      if (pageIndex >= 0 && pageIndex < pages.length) {
+      let dataURL;
+      // if data hai then i am believing the fact the case for setpages is done, i mean this will on change canvas not the state
+      if (data) {
         clearCanvas(); // Clear the current canvas
-        const dataURL = pages[pageIndex];
-        if (dataURL) {
-          const img = new Image();
-          img.src = dataURL;
-          img.onload = () => {
-            canvasContext.drawImage(img, 0, 0);
-          };
-        }
+        dataURL = data[pageIndex];
+      } else if (pageIndex >= 0 && pageIndex < pages.length) {
+        clearCanvas(); // Clear the current canvas
+        dataURL = pages[pageIndex];
+      } else {
+        console.warn("Invalid page index:", pageIndex);
+        return;
       }
-    } else {
-      console.warn("Invalid page index:", pageIndex);
+      if (dataURL) {
+        const img = new Image();
+        img.src = dataURL;
+        img.onload = () => {
+          const imgWidth = img.width;
+          const imgHeight = img.height;
+          const aspectRatio = imgWidth / imgHeight;
+
+          let canvasWidth = window.innerWidth - 16;
+          let canvasHeight = window.innerHeight - 120;
+
+          let finalWidth = canvasWidth;
+          let finalHeight = canvasHeight;
+
+          // Scale the image to fit within the frame even if size of device changes
+          if (aspectRatio > canvasWidth / canvasHeight) {
+            finalHeight = canvasWidth / aspectRatio;
+          } else {
+            finalWidth = canvasHeight * aspectRatio;
+          }
+
+          const xOffset = (canvasWidth - finalWidth) / 2; // Center horizontally
+          const yOffset = (canvasHeight - finalHeight) / 2; // Center vertically
+          canvasContext.drawImage(
+            img,
+            xOffset,
+            yOffset,
+            finalWidth,
+            finalHeight
+          );
+        };
+      }
     }
   };
   const saveCurrentPage = () => {
@@ -364,6 +614,10 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
         setShowPreview,
         showMainMenu,
         setShowMainMenu,
+        isLoading,
+        setLoading,
+        showImageMenu,
+        setShowImageMenu,
       }}
     >
       {children}

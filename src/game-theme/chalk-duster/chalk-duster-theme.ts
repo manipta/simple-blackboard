@@ -4,8 +4,10 @@ const penStroke = {
   lineCap: "round" as CanvasLineCap,
   strokeStyle: `rgba(255, 255, 255, ${0.4 + Math.random() * 0.2})`,
 };
-const board = "https://raw.github.com/mmoustafa/Chalkboard/master/img/bg.png";
-const pen = "https://raw.github.com/mmoustafa/Chalkboard/master/img/chalk.png";
+// const board = "https://raw.github.com/mmoustafa/Chalkboard/master/img/bg.png";
+const board = "/assets/board1.png";
+const pen = "/assets/chalk.png";
+// const pen = "https://raw.github.com/mmoustafa/Chalkboard/master/img/chalk.png";
 const duster = "/assets/duster.png";
 // Special Effect
 const specialEffect = (

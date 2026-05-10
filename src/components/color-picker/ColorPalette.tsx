@@ -1,13 +1,8 @@
 import { createContext, ReactNode, useContext, useState } from "react";
+import { defaultColorPalette } from "../../constants";
 
 const ColorPaletteContext = createContext({
-  favouriteColorsList: [
-    "#ff0000", // Red
-    "#00ff00", // Green
-    "#0000ff", // Blue
-    "#ffff00", // Yellow
-    "#ff00ff", // Magenta
-  ] as string[],
+  favouriteColorsList: defaultColorPalette as string[],
   index: 0 as number,
   setFavouriteColorsList: ((_: string[]) => {}) as React.Dispatch<
     React.SetStateAction<string[]>
@@ -41,13 +36,8 @@ export const ColorPalette = () => {
 };
 export const ColorPaletteProvider = ({ children }: { children: ReactNode }) => {
   const [index, setIndex] = useState<number>(0);
-  const [favouriteColorsList, setFavouriteColorsList] = useState<string[]>([
-    "#ff0000", // Red
-    "#00ff00", // Green
-    "#0000ff", // Blue
-    "#ffff00", // Yellow
-    "#ff00ff", // Magenta
-  ]);
+  const [favouriteColorsList, setFavouriteColorsList] =
+    useState<string[]>(defaultColorPalette);
   const handleColorChange = (newColor: string) => {
     if (newColor) {
       setFavouriteColorsList((prev) => {

@@ -8,6 +8,8 @@ import { StatusBar } from "@capacitor/status-bar";
 import { useEffect } from "react";
 import { CanvasDataProvider } from "./services/providers/CanvasDataProvider";
 import { SettingsProvider } from "./services/providers/SettingsProvider";
+import AdsSettingsProvider from "./services/providers/AdsSettingsProvider";
+import { ColorPaletteProvider } from "./components/color-picker/ColorPalette";
 function App() {
   useEffect(() => {
     const enableFullscreen = async () => {
@@ -23,17 +25,19 @@ function App() {
   return (
     <div className="h-screen w-full flex flex-col">
       <BrowserRouter>
-        <SettingsProvider>
-          <DialogProvider>
-            <CanvasDataProvider>
-              <DrawerShellProvider>
-                <div className="relative ">
-                  <AppRoutes />
-                </div>
-              </DrawerShellProvider>
-            </CanvasDataProvider>
-          </DialogProvider>
-        </SettingsProvider>
+        <AdsSettingsProvider>
+          <SettingsProvider>
+            <DialogProvider>
+              <ColorPaletteProvider>
+                <CanvasDataProvider>
+                  <DrawerShellProvider>
+                    <AppRoutes />
+                  </DrawerShellProvider>
+                </CanvasDataProvider>
+              </ColorPaletteProvider>
+            </DialogProvider>
+          </SettingsProvider>
+        </AdsSettingsProvider>
       </BrowserRouter>
     </div>
   );

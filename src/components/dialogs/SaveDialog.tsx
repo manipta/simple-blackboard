@@ -1,6 +1,7 @@
 import { Button, IconButton, TextField, Typography } from "@mui/material";
 import { useState } from "react";
 import CancelIcon from "@mui/icons-material/Cancel";
+import { useSettings } from "../../services/providers/SettingsProvider";
 
 const formatTimestamp = () => {
   const now = new Date();
@@ -14,8 +15,12 @@ const formatTimestamp = () => {
 };
 
 const SaveDialog = ({ saveFunction, closeDialog }: any) => {
+  const { boardConfig } = useSettings();
   const [fileName, setFileName] = useState(formatTimestamp());
-  const [bgColor, setBgColor] = useState("#000000");
+  console.log(boardConfig.board);
+  const [bgColor, setBgColor] = useState(
+    boardConfig.type == "color" ? boardConfig.board : "#000000"
+  );
 
   const handleSave = () => {
     saveFunction(bgColor, fileName);

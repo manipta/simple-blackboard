@@ -7,7 +7,7 @@ const PagePreviewer = ({ pages }: { pages: string[] }) => {
   const { setShowPreview } = useCanvasDataProvider();
   return (
     <div className="flex flex-col w-full items-center gap-8">
-      <div className="fixed flex w-full justify-center  bg-black p-2">
+      <div className={`fixed flex w-full justify-center bg-black p-2`}>
         <div className=" font-sans font-extrabold text-3xl">Previewer</div>
         <div className="fixed right-2">
           <IconButton

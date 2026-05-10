@@ -1,5 +1,7 @@
 import { HSLColor, SketchPicker } from "react-color";
 import { ColorPalette, useColorPalette } from "./ColorPalette";
+import { MdRestartAlt } from "react-icons/md";
+import { defaultColorPalette } from "../../constants";
 
 function getColorString(
   color: HSLColor,
@@ -74,7 +76,12 @@ function hslToHex(h: number, s: number, l: number, a: number): string {
 }
 
 const ColorPicker = () => {
-  const { index, handleColorChange, favouriteColorsList } = useColorPalette();
+  const {
+    index,
+    handleColorChange,
+    favouriteColorsList,
+    setFavouriteColorsList,
+  } = useColorPalette();
   // Update state when color changes
 
   return (
@@ -102,8 +109,23 @@ const ColorPicker = () => {
           }}
           className="rounded-md"
         >
-          <p className="text-md">Color Palette</p>
-          <ColorPalette />
+          <div className="relative">
+            <p className="text-md">Color Palette</p>
+            <div className=" flex justify-center">
+              <div className=" flex justify-center p-2 ">
+                <ColorPalette />
+              </div>
+              <div
+                className="absolute flex flex-col items-center  right-1 text-xs text-gray-500 "
+                onClick={() => {
+                  setFavouriteColorsList(defaultColorPalette);
+                }}
+              >
+                <MdRestartAlt size={15} />
+                Reset
+              </div>
+            </div>
+          </div>
         </div>
         {/* <p>Selected Color: {color}</p> */}
       </div>
