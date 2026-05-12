@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy – Canvas by ManiWare</title>
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2e3e;
+      --accent: #4f8ef7;
+      --accent-soft: rgba(79, 142, 247, 0.12);
+      --text: #e2e6f0;
+      --muted: #8892a4;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    /* ── header ── */
+    header {
+      background: linear-gradient(135deg, #1a1d27 0%, #12152a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 3rem 1.5rem 2.5rem;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--accent-soft);
+      border: 1px solid rgba(79, 142, 247, 0.3);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 999px;
+      margin-bottom: 1.2rem;
+    }
+
+    header h1 {
+      font-size: clamp(1.8rem, 5vw, 2.8rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #fff 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 0.6rem;
+      font-size: 0.95rem;
+    }
+
+    /* ── layout ── */
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 5rem;
+    }
+
+    /* ── section card ── */
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.8rem 2rem;
+      margin-bottom: 1.5rem;
+      transition: border-color 0.2s;
+    }
+
+    section:hover {
+      border-color: rgba(79, 142, 247, 0.35);
+    }
+
+    section h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    section h2 .icon {
+      font-size: 1.2rem;
+      -webkit-text-fill-color: initial;
+    }
+
+    p {
+      color: var(--text);
+      margin-bottom: 0.75rem;
+    }
+
+    p:last-child {
+      margin-bottom: 0;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0.5rem 0 0;
+    }
+
+    ul li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    ul li::before {
+      content: '›';
+      color: var(--accent);
+      font-weight: 700;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    /* ── highlight box ── */
+    .highlight {
+      background: var(--accent-soft);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 0.9rem 1.1rem;
+      margin-top: 0.75rem;
+      font-size: 0.92rem;
+      color: var(--text);
+    }
+
+    /* ── footer ── */
+    footer {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+
+<body>
+
+  <header>
+    <div class="badge">📋 Legal</div>
+    <h1>Privacy Policy</h1>
+    <p class="subtitle">Canvas by ManiWare &nbsp;·&nbsp; Last updated: May 12, 2025</p>
+  </header>
+
+  <main>
+
+    <section>
+      <h2><span class="icon">👋</span> Introduction</h2>
+      <p>
+        Canvas by ManiWare ("we", "our", or "the app") is a digital drawing and annotation
+        application. This Privacy Policy explains what information we collect, how we use it,
+        and your rights regarding that information.
+      </p>
+      <p>
+        By using Canvas by ManiWare, you agree to the practices described in this policy.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="icon">📦</span> Data We Collect</h2>
+      <p>Canvas by ManiWare is designed to be privacy-first. Here is exactly what we collect:</p>
+      <ul>
+        <li><strong>Drawing data &amp; settings</strong> — Stored locally on your device only. We never upload your
+          canvas content to any server.</li>
+        <li><strong>Ad interaction data</strong> — Collected by Google AdMob when you view banner or rewarded ads (see
+          Advertising section below).</li>
+      </ul>
+      <div class="highlight">
+        ✅ We do <strong>not</strong> collect your name, email address, phone number, location,
+        or any personally identifiable information.
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="icon">💾</span> Local Storage</h2>
+      <p>
+        All canvas pages, undo history, colour palettes, brush settings, and board configurations
+        are saved locally on your device using <strong>Capacitor Preferences</strong> (backed by
+        Android SharedPreferences). This data never leaves your device and is not accessible to us.
+      </p>
+      <p>
+        Ad-free timer progress is stored locally using <strong>Secure Storage</strong> so your
+        rewarded time persists between sessions.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="icon">📢</span> Advertising (Google AdMob)</h2>
+      <p>
+        Canvas by ManiWare uses <strong>Google AdMob</strong> to display banner ads and rewarded
+        video ads. AdMob may collect and use data to serve personalised or non-personalised
+        advertisements. This includes:
+      </p>
+      <ul>
+        <li>Device identifiers (e.g. Advertising ID)</li>
+        <li>IP address and general location (country/region)</li>
+        <li>Device model, OS version, and language settings</li>
+        <li>Ad interaction events (views, clicks, reward earned)</li>
+      </ul>
+      <p>
+        This data is collected and processed by Google, not by us. Please review
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">
+          Google's Privacy Policy
+        </a>
+        and
+        <a href="https://support.google.com/admob/answer/6128543" target="_blank" rel="noopener">
+          AdMob's data usage policy
+        </a>
+        for full details.
+      </p>
+      <div class="highlight">
+        You can opt out of personalised ads at any time through your device's settings:<br />
+        <strong>Settings → Google → Ads → Opt out of Ads Personalisation</strong>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="icon">🔒</span> Data Security</h2>
+      <p>
+        Since your drawing data is stored entirely on your device and we do not operate servers
+        that receive your personal data, there is no server-side risk of a data breach involving
+        your content.
+      </p>
+      <p>
+        We use Secure Storage for sensitive preferences (such as ad-free timer state) which is
+        encrypted on your device.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="icon">👶</span> Children's Privacy</h2>
+      <p>
+        Canvas by ManiWare does not knowingly collect personal information from children under
+        the age of 13. The app is intended for general audiences and is suitable for use in
+        educational settings.
+      </p>
+      <p>
+        If you believe a child has provided personal information through the app, please contact
+        us so we can take appropriate action.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="icon">🔗</span> Third-Party Services</h2>
+      <p>The app integrates the following third-party SDKs:</p>
+      <ul>
+        <li><a href="https://admob.google.com" target="_blank" rel="noopener">Google AdMob</a> — advertising</li>
+        <li><a href="https://capacitorjs.com" target="_blank" rel="noopener">Capacitor</a> — native platform bridge
+          (file system, preferences)</li>
+      </ul>
+      <p>
+        These services have their own privacy policies. We are not responsible for their data
+        practices.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="icon">✏️</span> Changes to This Policy</h2>
+      <p>
+        We may update this Privacy Policy from time to time. Any changes will be reflected on
+        this page with an updated "Last updated" date. Continued use of the app after changes
+        constitutes your acceptance of the revised policy.
+      </p>
+    </section>
+
+    <section>
+      <h2><span class="icon">📬</span> Contact Us</h2>
+      <p>
+        If you have any questions or concerns about this Privacy Policy, please reach out:
+      </p>
+      <ul>
+        <li>GitHub: <a href="https://github.com/manipta" target="_blank" rel="noopener">github.com/manipta</a></li>
+      </ul>
+    </section>
+
+  </main>
+
+  <footer>
+    &copy; 2025 Canvas by ManiWare. All rights reserved.
+  </footer>
+
+</body>
+
+</html>
