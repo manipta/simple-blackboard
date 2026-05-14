@@ -4,17 +4,17 @@ import { defaultColorPalette } from "../../constants";
 const ColorPaletteContext = createContext({
   favouriteColorsList: defaultColorPalette as string[],
   index: 0 as number,
-  setFavouriteColorsList: ((_: string[]) => {}) as React.Dispatch<
+  setFavouriteColorsList: ((_: string[]) => { }) as React.Dispatch<
     React.SetStateAction<string[]>
   >,
-  setIndex: (_: number) => {},
-  handleColorChange: (_: string) => {},
+  setIndex: (_: number) => { },
+  handleColorChange: (_: string) => { },
 });
 export const ColorPalette = () => {
   const { favouriteColorsList, index, setIndex } = useColorPalette();
-  console.log(favouriteColorsList);
+  // console.log(favouriteColorsList);
   return (
-    <>
+    <div className="flex items-center justify-center">
       {favouriteColorsList.map((color, i) => (
         <div
           key={i}
@@ -31,7 +31,7 @@ export const ColorPalette = () => {
           }}
         />
       ))}
-    </>
+    </div>
   );
 };
 export const ColorPaletteProvider = ({ children }: { children: ReactNode }) => {

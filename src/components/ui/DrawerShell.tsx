@@ -30,14 +30,21 @@ export const DrawerShell = ({ menu, children, height }: DrawerShellProps) => {
             boxSizing: "border-box",
             height: height || drawerHeight, // Set height instead of width
             width: "100%", // Make it span the full width of the screen
-            borderTopLeftRadius: "8px", // Optional: rounded corners
-            borderTopRightRadius: "8px", // Optional: rounded corners
+            borderTopLeftRadius: "24px", // Rounded corners
+            borderTopRightRadius: "24px", // Rounded corners
             position: "absolute", // Ensure it's positioned at the bottom
             bottom: 0,
             left: 0,
+            backgroundColor: "rgba(17, 24, 39, 0.85)", // Tailwind gray-900 with opacity
+            backdropFilter: "blur(16px)", // Glassmorphism effect
+            borderTop: "1px solid rgba(75, 85, 99, 0.4)", // Subtle top border
+            boxShadow: "0 -10px 40px rgba(0, 0, 0, 0.5)", // Shadow
           },
         }}
       >
+        <div className="w-full flex justify-center pt-3 pb-1">
+          <div className="w-12 h-1.5 bg-gray-600 rounded-full"></div>
+        </div>
         {menu}
       </Drawer>
 

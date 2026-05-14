@@ -1,17 +1,18 @@
-import { Switch, TextField } from "@mui/material";
-import { APP_NAME, boardColors } from "../../constants";
+import { Icon, Switch, TextField } from "@mui/material";
+import { boardColors } from "../../constants";
 import { useCanvasDataProvider } from "../../services/providers/CanvasDataProvider";
-import "./MainMenu.scss";
 import { useSettings } from "../../services/providers/SettingsProvider";
 import { useAdsSettings } from "../../services/providers/AdsSettingsProvider";
 import BgColorChoice from "./BgColorChoice";
-import { MdChevronLeft, MdChevronRight } from "react-icons/md";
-import { useState } from "react";
+import { MdChevronLeft, MdChevronRight, MdSettings, MdColorLens, MdFolder, MdStar, MdApps } from "react-icons/md";
+import { useState, useEffect } from "react";
+
 export interface BoardColorConfig {
   board: string;
   type: "image" | "color";
   title: string;
 }
+
 const MainMenu = () => {
   const { setShowMainMenu } = useCanvasDataProvider();
   const {
@@ -24,128 +25,189 @@ const MainMenu = () => {
     boardConfig,
     setBoardConfig,
   } = useSettings();
-  const { adFreeTimeLeft, showRewardedAd } = useAdsSettings();
+  const { adFreeTimeLeft, cooldownTimeLeft, showRewardedAd, setForceHideBanner } = useAdsSettings();
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setForceHideBanner(true);
+    return () => setForceHideBanner(false);
+  }, [setForceHideBanner]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m > 0) return `${m}m ${s < 10 ? '0' : ''}${s}s`;
+    return `${s}s`;
+  };
+
   return (
     <div
-      className="w-full h-full flex flex-col gap-8"
+      className="w-full min-h-screen bg-gradient-to-b from-gray-900 to-black text-gray-100 flex flex-col items-center overflow-y-auto pb-12 font-sans"
       onClick={() => {
         if (open) setOpen(false);
       }}
     >
-      <div className="flex text-4xl bg-black ">
-        <div
-          className="text-center content-center relative left-4 "
-          onClick={() => setShowMainMenu(false)}
-        >
-          <MdChevronLeft size={50} />
-        </div>
-        <div className=" w-full flex justify-center items-center text-center p-4">
-          {APP_NAME}
-        </div>
+      {/* Header */}
+      <div className="w-full max-w-2xl flex items-center justify-between p-6 sticky top-0 backdrop-blur-xl z-10 border-b border-gray-800">
+        <Icon className="text-gray-300" onClick={() => setShowMainMenu(false)}>
+          <MdChevronLeft size={32} />
+        </Icon>
+        <h1 className="flex items-center justify-center text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+          Settings
+        </h1>
+        <div className="w-10 h-10"></div> {/* Spacer to center title */}
       </div>
 
-      <div className="flex flex-col w-full">
-        <div className="flex justify-between items-center p-2 px-8 menu-item">
-          <div>Chalk Effect</div>
-          <Switch
-            checked={chalkEffect}
-            onChange={(e) => {
-              setChalkEffect(e.target.checked);
-            }}
-            sx={{
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color: "darkgreen", // change the color when checked
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor: "green", // change track color when checked
-              },
-            }}
-          ></Switch>
-        </div>
-        <div className="flex justify-between items-center p-2 px-8 menu-item">
-          <div>Chalk/Duster Animation</div>
-          <Switch
-            checked={chalkAnimation}
-            onChange={(e) => {
-              setChalkAnimation(e.target.checked);
-            }}
-            sx={{
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color: "darkgreen", // change the color when checked
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor: "green", // change track color when checked
-              },
-            }}
-          ></Switch>
-        </div>
-      </div>
-      <div className="flex flex-col w-full">
-        <div className="flex flex-col justify-between p-2 px-8 menu-item">
-          <div>Save Location</div>
-          <div className="text-sm font-extrabold text-black flex items-center gap-1">
-            /Documents/
-            <TextField
-              defaultValue={defaultSavePath}
-              onChange={(e) => {
-                if (e.target.value && e.target.value != "") {
-                  setDefaultSavePath(e.target.value);
-                }
-              }}
-              inputProps={{
-                style: {
-                  background: "white",
-                  borderRadius: "4px",
-                  padding: "2px",
-                },
-              }}
-            ></TextField>
-            /{"<FILE_NAME>.pdf"}
+      <div className="w-full max-w-2xl px-4 mt-6 flex flex-col gap-6">
+
+        {/* Section: Preferences */}
+        <div className="bg-gray-800/50 backdrop-blur-md rounded-2xl border border-gray-700/50 overflow-hidden shadow-lg">
+          <div className="px-6 py-4 flex items-center gap-3 border-b border-gray-700/50 bg-gray-800/80">
+            <MdSettings className="text-blue-400" size={24} />
+            <h2 className="text-lg font-semibold text-gray-200">Drawing Preferences</h2>
+          </div>
+
+          <div className="flex flex-col">
+            <div className="flex justify-between items-center p-4 px-6 border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors">
+              <div>
+                <div className="font-medium text-gray-200">Chalk Effect</div>
+                <div className="text-sm text-gray-400">Enable realistic chalk texture</div>
+              </div>
+              <Switch
+                checked={chalkEffect}
+                onChange={(e) => setChalkEffect(e.target.checked)}
+                color="primary"
+              />
+            </div>
+            <div className="flex justify-between items-center p-4 px-6 hover:bg-gray-700/20 transition-colors">
+              <div>
+                <div className="font-medium text-gray-200">Tool Animations</div>
+                <div className="text-sm text-gray-400">Show chalk and duster animations</div>
+              </div>
+              <Switch
+                checked={chalkAnimation}
+                onChange={(e) => setChalkAnimation(e.target.checked)}
+                color="primary"
+              />
+            </div>
           </div>
         </div>
-      </div>
-      <div className="flex flex-col w-full">
-        <div className="flex flex-col justify-between p-2 px-8 menu-item">
-          <div>Board Colors</div>
-          <div className="flex gap-2 justify-evenly w-full h-full mt-2">
-            {boardColors.map((board) => (
-              <div className="text-sm font-semibold text-stone-700 flex items-center gap-1">
-                <BgColorChoice
-                  board={board.board}
-                  type={board.type}
-                  title={board.title}
-                  check={
-                    boardConfig.type == board.type &&
-                    boardConfig.board == board.board
-                  }
-                  setBoardConfig={setBoardConfig}
+
+        {/* Section: Configuration */}
+        <div className="bg-gray-800/50 backdrop-blur-md rounded-2xl border border-gray-700/50 overflow-hidden shadow-lg">
+          <div className="px-6 py-4 flex items-center gap-3 border-b border-gray-700/50 bg-gray-800/80">
+            <MdFolder className="text-indigo-400" size={24} />
+            <h2 className="text-lg font-semibold text-gray-200">Configuration</h2>
+          </div>
+
+          <div className="flex flex-col">
+            <div className="flex flex-col gap-3 p-4 px-6 border-b border-gray-700/30 hover:bg-gray-700/20 transition-colors">
+              <div>
+                <div className="font-medium text-gray-200">Save Location</div>
+                <div className="text-sm text-gray-400">Directory to export your boards</div>
+              </div>
+              <div className="flex items-center gap-2 bg-gray-900 rounded-lg p-2 border border-gray-700">
+                <span className="text-gray-400 pl-2">/Documents/</span>
+                <TextField
+                  defaultValue={defaultSavePath}
+                  variant="standard"
+                  onChange={(e) => {
+                    if (e.target.value && e.target.value !== "") {
+                      setDefaultSavePath(e.target.value);
+                    }
+                  }}
+                  InputProps={{
+                    disableUnderline: true,
+                    style: { color: "white", padding: "0 4px", fontSize: "14px" }
+                  }}
+                  className="bg-gray-800 rounded px-2 py-1 flex-1 text-white"
                 />
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
 
-      <div className="flex flex-col w-full">
-        <div className="flex justify-between items-center p-2 px-8 menu-item cursor-pointer" onClick={showRewardedAd}>
-          <div>
-            <div className="font-bold">Watch Ad for Premium</div>
-            <div className="text-xs text-stone-300">Get 5 mins ad-free (Time left: {adFreeTimeLeft}s)</div>
-          </div>
-          <div>
-            <MdChevronRight size={40} />
+            <div className="flex flex-col gap-3 p-4 px-6 hover:bg-gray-700/20 transition-colors">
+              <div className="flex items-center gap-2">
+                <MdColorLens className="text-gray-400" size={20} />
+                <div className="font-medium text-gray-200">Board Background</div>
+              </div>
+              <div className="flex flex-wrap gap-4 justify-evenly mt-2 p-2 bg-gray-900/50 rounded-xl">
+                {boardColors.map((board) => (
+                  <div key={board.title} className="flex flex-col items-center gap-2 transform transition-transform hover:scale-105">
+                    <BgColorChoice
+                      board={board.board}
+                      type={board.type}
+                      title={board.title}
+                      check={boardConfig.type === board.type && boardConfig.board === board.board}
+                      setBoardConfig={setBoardConfig}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="flex flex-col w-full">
-        <div className="flex justify-between items-center p-2 px-8 menu-item" onClick={() => { window.open("https://www.secretnotes.in", "_blank"); }}>
-          <div>More Apps by Manwiare</div>
-          <div>
-            <MdChevronRight size={40} />
+        {/* Section: Premium & Extras */}
+        <div className="bg-gray-800/50 backdrop-blur-md rounded-2xl border border-gray-700/50 overflow-hidden shadow-lg mt-2">
+          <div className="flex flex-col">
+            <div
+              className={`flex justify-between items-center p-5 px-6 border-b border-gray-700/30 transition-all group ${
+                cooldownTimeLeft > 0 ? "opacity-50 cursor-not-allowed" : "hover:bg-gray-700/40 cursor-pointer"
+              }`}
+              onClick={() => {
+                if (cooldownTimeLeft === 0) showRewardedAd();
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`p-3 bg-amber-500/20 text-amber-400 rounded-xl ${cooldownTimeLeft === 0 ? "group-hover:scale-110" : ""} transition-transform`}>
+                  <MdStar size={28} />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-amber-400">Unlock Premium</div>
+                  <div className="text-sm text-gray-400 mt-1">
+                    Watch a short ad for 10 mins of ad-free drawing!
+                    {adFreeTimeLeft > 0 && (
+                      <span className="ml-1 text-amber-300 font-semibold block sm:inline">
+                        (Ad-free: {formatTime(adFreeTimeLeft)})
+                      </span>
+                    )}
+                    {cooldownTimeLeft > 0 && (
+                      <span className="ml-1 text-red-400 font-semibold block sm:inline">
+                        (Wait: {formatTime(cooldownTimeLeft)})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <MdChevronRight size={32} className="text-gray-500 group-hover:text-white transition-colors" />
+            </div>
+
+            <div
+              className="flex justify-between items-center p-5 px-6 hover:bg-gray-700/40 cursor-pointer transition-all group"
+              onClick={() => window.open("https://www.secretnotes.in", "_blank")}
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-500/20 text-blue-400 rounded-xl group-hover:scale-110 transition-transform">
+                  <MdApps size={28} />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-gray-200">More Apps by Maniware</div>
+                  <div className="text-sm text-gray-400 mt-1">Discover other great tools and utilities</div>
+                </div>
+              </div>
+              <MdChevronRight size={32} className="text-gray-500 group-hover:text-white transition-colors" />
+            </div>
           </div>
         </div>
+
+        {/* Footer Action */}
+        <button
+          onClick={() => setShowMainMenu(false)}
+          className="mt-6 w-full max-w-sm mx-auto py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-blue-500/30 transition-all transform hover:-translate-y-1 active:translate-y-0"
+        >
+          Back to Canvas
+        </button>
+
       </div>
     </div>
   );

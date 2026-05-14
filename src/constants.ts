@@ -19,12 +19,16 @@ export enum UserType {
   Premium = "premium-user",
 }
 
-export const APP_NAME = "Drawing Canvas";
+export const APP_NAME = "Canvas";
 export const STORAGE_FOLDER_NAME = APP_NAME ?? "SimpleBlackBoard";
 
-export const REWARD_AD_FREE_TIME_SECONDS = 300; // 5 minutes
+export const REWARD_AD_FREE_TIME_SECONDS = 600; // 10 minutes
 export const ADMOB_REWARDED_AD_ID = "ca-app-pub-3940256099942544/5224354917"; // Google Test ID
 export const ADMOB_BANNER_AD_ID = "ca-app-pub-3940256099942544/6300978111"; // Google Test ID
+export const ADMOB_INTERSTITIAL_AD_ID = "ca-app-pub-3940256099942544/1033173712"; // Google Test ID
+
+// Height reserved at the bottom of the screen for the AdMob banner (dp ≈ px on most devices)
+export const BANNER_HEIGHT_PX = 60;
 
 export const penSizes = [2, 4, 8, 12, 16]; // Pen sizes in pixels
 
@@ -49,7 +53,7 @@ export const boardColors: BoardColorConfig[] = [
 export const defaultColorPalette = [
   "#ff0000", // Red
   "#00ff00", // Green
-  "#0000ff", // Blue
-  "#ffff00", // Yellow
+  // "#0000ff", // Blue
+  // "#ffff00", // Yellow
   "#ff00ff", // Magenta
 ];

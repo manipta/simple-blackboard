@@ -1,27 +1,26 @@
-import { IconButton } from "@mui/material";
 import SinglePage from "./SinglePage";
-import CancelIcon from "@mui/icons-material/Cancel";
+import { MdClose } from "react-icons/md";
 import { useCanvasDataProvider } from "../../services/providers/CanvasDataProvider";
+import { Icon } from "@mui/material";
 
 const PagePreviewer = ({ pages }: { pages: string[] }) => {
   const { setShowPreview } = useCanvasDataProvider();
+
   return (
-    <div className="flex flex-col w-full items-center gap-8">
-      <div className={`fixed flex w-full justify-center bg-black p-2`}>
-        <div className=" font-sans font-extrabold text-3xl">Previewer</div>
-        <div className="fixed right-2">
-          <IconButton
-            onClick={() => {
-              setShowPreview(false);
-            }}
-          >
-            <CancelIcon fontSize="small" sx={{ color: "white" }} />
-          </IconButton>
-        </div>
+    <div className="flex flex-col w-full min-h-screen bg-gray-900 text-gray-100 items-center overflow-y-auto font-sans pb-12">
+      {/* Header */}
+      <div className="w-full flex items-center justify-between p-6 sticky top-0 bg-gray-900/80 backdrop-blur-xl z-20 border-b border-gray-800">
+        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-indigo-400">
+          Page Overview
+        </h1>
+        <Icon onClick={() => setShowPreview(false)} className="cursor-pointer">
+          <MdClose size={28} />
+        </Icon>
       </div>
-      <div className="flex flex-wrap max-w-[90%] min-w-[90%] gap-2 justify-center mt-16 p-4 ">
+
+      <div className="flex flex-wrap w-full max-w-4xl gap-8 justify-center mt-8 px-6">
         {pages.map((page, index) => (
-          <SinglePage pageData={page} index={index} />
+          <SinglePage key={index} pageData={page} index={index} />
         ))}
       </div>
     </div>

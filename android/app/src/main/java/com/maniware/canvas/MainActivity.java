@@ -1,4 +1,4 @@
-package in.maniware.drawingBoard;
+package com.maniware.canvas;
 
 import android.os.Bundle;
 import android.view.View;

@@ -19,6 +19,46 @@ import { useSettings } from "./SettingsProvider";
 import { Preferences } from "@capacitor/preferences";
 import { LocalStorageKeys } from "../../constants";
 import { useColorPalette } from "../../components/color-picker/ColorPalette";
+import { openDB, DBSchema, IDBPDatabase } from "idb";
+
+// IndexedDB Schema for storing large canvas data
+interface CanvasDB extends DBSchema {
+  pages: {
+    key: number;
+    value: string;
+  };
+  undoRedoStack: {
+    key: number;
+    value: UndoRedoStack;
+  };
+  metadata: {
+    key: string;
+    value: any;
+  };
+}
+
+// Initialize IndexedDB
+let dbPromise: Promise<IDBPDatabase<CanvasDB>> | null = null;
+
+const getDB = () => {
+  if (!dbPromise) {
+    dbPromise = openDB<CanvasDB>("CanvasStorage", 1, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains("pages")) {
+          db.createObjectStore("pages");
+        }
+        if (!db.objectStoreNames.contains("undoRedoStack")) {
+          db.createObjectStore("undoRedoStack");
+        }
+        if (!db.objectStoreNames.contains("metadata")) {
+          db.createObjectStore("metadata");
+        }
+      },
+    });
+  }
+  return dbPromise;
+};
+
 const CanvasDataContext = createContext({
   pages: [] as string[],
   currentPage: 0,
@@ -30,44 +70,44 @@ const CanvasDataContext = createContext({
   isLoading: false,
   undoRedoStack: [{ undoStack: [] as string[], redoStack: [] as string[] }],
   canvasRef: null as unknown as React.MutableRefObject<HTMLCanvasElement>,
-  setPages: (([]: string[]) => { }) as React.Dispatch<
+  setPages: (([]: string[]) => {}) as React.Dispatch<
     React.SetStateAction<string[]>
   >,
-  setCurrentPage: ((_: number) => { }) as React.Dispatch<
+  setCurrentPage: ((_: number) => {}) as React.Dispatch<
     React.SetStateAction<number>
   >,
-  setStrokeSize: ((_: number) => { }) as React.Dispatch<
+  setStrokeSize: ((_: number) => {}) as React.Dispatch<
     React.SetStateAction<number>
   >,
-  setEraserSize: ((_: number) => { }) as React.Dispatch<
+  setEraserSize: ((_: number) => {}) as React.Dispatch<
     React.SetStateAction<number>
   >,
-  setIsEraser: ((_: boolean) => { }) as React.Dispatch<
+  setIsEraser: ((_: boolean) => {}) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
-  setShowPreview: ((_: boolean) => { }) as React.Dispatch<
+  setShowPreview: ((_: boolean) => {}) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
-  setShowMainMenu: ((_: boolean) => { }) as React.Dispatch<
+  setShowMainMenu: ((_: boolean) => {}) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
-  setLoading: ((_: boolean) => { }) as React.Dispatch<
+  setLoading: ((_: boolean) => {}) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
   isCanvasClear: () => false as boolean,
-  handleSizeChange: (_: any) => { },
+  handleSizeChange: (_: any) => {},
   getCanvasContext: () => null as CanvasRenderingContext2D | null,
   setUndoRedoStack: ((_: UndoRedoStack[]) => []) as React.Dispatch<
     React.SetStateAction<UndoRedoStack[]>
   >,
-  clearCanvas: () => { },
-  loadPage: (_: number, __?: string[]) => { },
-  resetCanvas: () => { },
-  toggleTool: () => { },
-  exportToPDF: () => { },
-  saveCurrentPage: () => { },
-  saveStateToUndoStack: () => { },
-  setShowImageMenu: ((_: boolean) => { }) as React.Dispatch<
+  clearCanvas: () => {},
+  loadPage: (_: number, __?: string[]) => {},
+  resetCanvas: () => {},
+  toggleTool: () => {},
+  exportToPDF: () => {},
+  saveCurrentPage: () => {},
+  saveStateToUndoStack: () => {},
+  setShowImageMenu: ((_: boolean) => {}) as React.Dispatch<
     React.SetStateAction<boolean>
   >,
   showImageMenu: false,
@@ -107,7 +147,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
   const { setFavouriteColorsList } = useColorPalette();
 
   const canvasRef = useRef<HTMLCanvasElement>(
-    null as unknown as HTMLCanvasElement
+    null as unknown as HTMLCanvasElement,
   );
 
   // const [lastSavedConfig, setLastSavedConfig] =
@@ -139,25 +179,52 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
     currentPageRef.current = currentPage;
   }, [pages, undoRedoStack, currentPage]);
 
-  // Persist all canvas state to Preferences
-  const saveAllToStorage = useCallback(async (pgs: string[], urStack: UndoRedoStack[], currPage: number) => {
-    try {
-      await Preferences.set({ key: LocalStorageKeys.CANVAS_DATA, value: JSON.stringify(pgs) });
-      await Preferences.set({ key: LocalStorageKeys.UNDO_REDO_STACK, value: JSON.stringify(urStack) });
-      await Preferences.set({ key: LocalStorageKeys.CURRENT_PAGE, value: String(currPage) });
-    } catch (e) {
-      console.error("Error saving canvas state", e);
-    }
-  }, []);
+  // Persist all canvas state to IndexedDB (for large data)
+  const saveAllToStorage = useCallback(
+    async (pgs: string[], urStack: UndoRedoStack[], currPage: number) => {
+      try {
+        const db = await getDB();
+
+        // Save pages to IndexedDB (handles large data)
+        for (let i = 0; i < pgs.length; i++) {
+          await db.put("pages", pgs[i], i);
+        }
+
+        // Save undo/redo stack to IndexedDB
+        for (let i = 0; i < urStack.length; i++) {
+          await db.put("undoRedoStack", urStack[i], i);
+        }
+
+        // Save metadata to IndexedDB
+        await db.put("metadata", pgs.length, "pageCount");
+        await db.put("metadata", currPage, "currentPage");
+
+        // Also save lightweight metadata to Preferences for quick access
+        await Preferences.set({
+          key: LocalStorageKeys.CURRENT_PAGE,
+          value: String(currPage),
+        });
+        await Preferences.set({ key: "pageCount", value: String(pgs.length) });
+
+        // console.log("Canvas data saved successfully to IndexedDB");
+      } catch (e) {
+        console.error("Error saving canvas state", e);
+      }
+    },
+    [],
+  );
 
   // Debounced save: triggers 1s after the last change
   const saveDebounceTimer = useRef<any>(null);
-  const scheduleSave = useCallback((pgs: string[], urStack: UndoRedoStack[], currPage: number) => {
-    if (saveDebounceTimer.current) clearTimeout(saveDebounceTimer.current);
-    saveDebounceTimer.current = setTimeout(() => {
-      saveAllToStorage(pgs, urStack, currPage);
-    }, 1000);
-  }, [saveAllToStorage]);
+  const scheduleSave = useCallback(
+    (pgs: string[], urStack: UndoRedoStack[], currPage: number) => {
+      if (saveDebounceTimer.current) clearTimeout(saveDebounceTimer.current);
+      saveDebounceTimer.current = setTimeout(() => {
+        saveAllToStorage(pgs, urStack, currPage);
+      }, 1000);
+    },
+    [saveAllToStorage],
+  );
 
   useEffect(() => {
     // let Iid: string | number | NodeJS.Timeout | undefined;
@@ -221,32 +288,94 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
   const getStorageItems = async () => {
     setLoading(true);
     try {
-      const { value: lastPages } = await Preferences.get({ key: LocalStorageKeys.CANVAS_DATA });
-      const { value: colorPalette } = await Preferences.get({ key: LocalStorageKeys.COLOR_PALETTE });
-      const { value: lastPage } = await Preferences.get({ key: LocalStorageKeys.CURRENT_PAGE });
-      const { value: defaultSavePath } = await Preferences.get({ key: LocalStorageKeys.DEFAULT_SAVE_PATH });
-      const { value: eraserSize } = await Preferences.get({ key: LocalStorageKeys.ERASER_SIZE });
-      const { value: strokeSize } = await Preferences.get({ key: LocalStorageKeys.STROKE_SIZE });
-      const { value: undoRedoStack } = await Preferences.get({ key: LocalStorageKeys.UNDO_REDO_STACK });
-      const { value: boardConfig } = await Preferences.get({ key: LocalStorageKeys.BOARD_CONFIG });
-      const { value: chalkEffectAndAnimation } = await Preferences.get({ key: LocalStorageKeys.CHALK_EFFECT_AND_ANIMATION });
+      const db = await getDB();
 
-      if (lastPages && undoRedoStack) {
-        const parsedPages = JSON.parse(lastPages);
-        const parsedStack = JSON.parse(undoRedoStack);
-        const parsedPage = lastPage ? parseInt(lastPage, 10) : 0;
+      // Try to load from IndexedDB first
+      const pageCount = await db.get("metadata", "pageCount");
+      const currentPageFromDB = await db.get("metadata", "currentPage");
+
+      let parsedPages: string[] = [];
+      let parsedStack: UndoRedoStack[] = [];
+      let parsedPage = 0;
+
+      if (pageCount && pageCount > 0) {
+        // Load pages from IndexedDB
+        for (let i = 0; i < pageCount; i++) {
+          const page = await db.get("pages", i);
+          parsedPages.push(page || "");
+        }
+
+        // Load undo/redo stack from IndexedDB
+        for (let i = 0; i < pageCount; i++) {
+          const stack = await db.get("undoRedoStack", i);
+          parsedStack.push(stack || { undoStack: [], redoStack: [] });
+        }
+
+        parsedPage = currentPageFromDB || 0;
+
         setPages(parsedPages);
         setCurrentPage(parsedPage);
         setUndoRedoStack(parsedStack);
         loadPage(parsedPage, parsedPages);
+      } else {
+        // Fallback: Try to migrate from old Preferences storage
+        const { value: lastPages } = await Preferences.get({
+          key: LocalStorageKeys.CANVAS_DATA,
+        });
+        const { value: undoRedoStack } = await Preferences.get({
+          key: LocalStorageKeys.UNDO_REDO_STACK,
+        });
+        const { value: lastPage } = await Preferences.get({
+          key: LocalStorageKeys.CURRENT_PAGE,
+        });
+
+        if (lastPages && undoRedoStack) {
+          parsedPages = JSON.parse(lastPages);
+          parsedStack = JSON.parse(undoRedoStack);
+          parsedPage = lastPage ? parseInt(lastPage, 10) : 0;
+
+          // Migrate to IndexedDB
+          await saveAllToStorage(parsedPages, parsedStack, parsedPage);
+
+          // Clear old Preferences data to free up space
+          await Preferences.remove({ key: LocalStorageKeys.CANVAS_DATA });
+          await Preferences.remove({ key: LocalStorageKeys.UNDO_REDO_STACK });
+
+          setPages(parsedPages);
+          setCurrentPage(parsedPage);
+          setUndoRedoStack(parsedStack);
+          loadPage(parsedPage, parsedPages);
+        }
       }
+
+      // Load other settings from Preferences (these are small)
+      const { value: colorPalette } = await Preferences.get({
+        key: LocalStorageKeys.COLOR_PALETTE,
+      });
+      const { value: defaultSavePath } = await Preferences.get({
+        key: LocalStorageKeys.DEFAULT_SAVE_PATH,
+      });
+      const { value: eraserSize } = await Preferences.get({
+        key: LocalStorageKeys.ERASER_SIZE,
+      });
+      const { value: strokeSize } = await Preferences.get({
+        key: LocalStorageKeys.STROKE_SIZE,
+      });
+      const { value: boardConfig } = await Preferences.get({
+        key: LocalStorageKeys.BOARD_CONFIG,
+      });
+      const { value: chalkEffectAndAnimation } = await Preferences.get({
+        key: LocalStorageKeys.CHALK_EFFECT_AND_ANIMATION,
+      });
+
       if (defaultSavePath) setDefaultSavePath(JSON.parse(defaultSavePath));
       if (strokeSize) setStrokeSize(parseInt(JSON.parse(strokeSize)));
       if (eraserSize) setEraserSize(parseInt(JSON.parse(eraserSize)));
       if (colorPalette) setFavouriteColorsList(JSON.parse(colorPalette));
       if (boardConfig) setBoardConfig(JSON.parse(boardConfig));
       if (chalkEffectAndAnimation) {
-        const parsed: { chalkEffect: boolean; chalkAnimation: boolean } = JSON.parse(chalkEffectAndAnimation);
+        const parsed: { chalkEffect: boolean; chalkAnimation: boolean } =
+          JSON.parse(chalkEffectAndAnimation);
         setChalkEffect(parsed.chalkEffect);
         setChalkAnimation(parsed.chalkAnimation);
       }
@@ -272,7 +401,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
       0,
       0,
       canvasRef.current?.width || 0,
-      canvasRef.current?.height || 0
+      canvasRef.current?.height || 0,
     );
 
     const data = imageData.data;
@@ -298,7 +427,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
         0,
         0,
         canvasContext.canvas.width,
-        canvasContext.canvas.height
+        canvasContext.canvas.height,
       );
     }
   };
@@ -308,8 +437,8 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loadPage = (pageIndex: number, data?: string[]) => {
-    console.log("Loading", pageIndex);
-    console.log(pages);
+    // console.log("Loading", pageIndex);
+    // console.log(pages);
     const canvasContext = getCanvasContext();
     if (canvasContext) {
       let dataURL;
@@ -352,7 +481,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
             xOffset,
             yOffset,
             finalWidth,
-            finalHeight
+            finalHeight,
           );
         };
       }
@@ -366,7 +495,11 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
         const updatedPages = [...prevPages];
         updatedPages[currentPage] = dataURL;
         // Persist after updating pages
-        scheduleSave(updatedPages, undoRedoStackRef.current, currentPageRef.current);
+        scheduleSave(
+          updatedPages,
+          undoRedoStackRef.current,
+          currentPageRef.current,
+        );
         return updatedPages;
       });
     }
@@ -392,7 +525,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
     }
     openDialog(
       <SaveDialog saveFunction={mainSaveFunction}></SaveDialog>,
-      "Save the Pdf"
+      "Save the Pdf",
     );
     // here
     // const { cancelled } = await Dialog.prompt({
@@ -424,10 +557,10 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
       return new Promise<HTMLImageElement>((resolve, reject) => {
         const img = new Image();
 
-        console.log("Attempting to load base64 image.");
+        // console.log("Attempting to load base64 image.");
 
         img.onload = () => {
-          console.log("Base64 image loaded successfully.");
+          // console.log("Base64 image loaded successfully.");
           resolve(img);
         };
 
@@ -435,7 +568,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
           console.error("Failed to load base64 image:", error);
           reject(new Error("Failed to load base64 image."));
         };
-        console.log(src);
+        // console.log(src);
 
         img.src = src; // Directly set the base64 string
       });
@@ -445,7 +578,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
     for (let index = 0; index < pages.length; index++) {
       try {
         const img = await loadImage(pages[index]);
-        console.log(img);
+        // console.log(img);
         const imgWidth = img.width;
         const imgHeight = img.height;
         const aspectRatio = imgWidth / imgHeight;
@@ -517,7 +650,7 @@ const CanvasDataProvider = ({ children }: { children: ReactNode }) => {
           recursive: true,
         });
         alert(
-          `PDF saved successfully to /Documents/${defaultSavePath}/${fileName}.pdf`
+          `PDF saved successfully to /Documents/${defaultSavePath}/${fileName}.pdf`,
         );
         await FileOpener.open({
           filePath: result.uri,

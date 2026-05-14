@@ -2,12 +2,10 @@ import { Select, MenuItem, Button, IconButton } from "@mui/material";
 import { BsEraserFill, BsEye } from "react-icons/bs";
 import {
   MdNoteAdd,
-  MdAddCard,
   MdOutlineUndo,
   MdRedo,
-  MdDelete,
   MdDraw,
-  MdMenu,
+  MdSettings,
   MdImage,
   MdCancel,
 } from "react-icons/md";
@@ -19,7 +17,6 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import CancelPresentationIcon from "@mui/icons-material/CancelPresentation";
 import ColorLensTwoToneIcon from "@mui/icons-material/ColorLensTwoTone";
 import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
-import { UndoRedoStack } from "../../interfaces/main-canvas/DrawingTool";
 import { useDrawerShell } from "../../services/providers/DrawerShellProvider";
 const BottomToolbar = () => {
   const { openDrawer } = useDrawerShell();
@@ -64,10 +61,10 @@ const BottomToolbar = () => {
   };
   const clearScreen = async () => {
     const { value } = await Dialog.confirm({
-      title: 'Clear Screen',
-      message: 'Are you sure you want to clear the screen?',
-      okButtonTitle: 'Clear',
-      cancelButtonTitle: 'Cancel'
+      title: "Clear Screen",
+      message: "Are you sure you want to clear the screen?",
+      okButtonTitle: "Clear",
+      cancelButtonTitle: "Cancel",
     });
     if (!value) return;
 
@@ -133,7 +130,7 @@ const BottomToolbar = () => {
     });
   };
   const deletePage = async (pageIndex: number) => {
-    console.log("Deleting page at index:", pageIndex);
+    // console.log("Deleting page at index:", pageIndex);
 
     if (pages.length === 1) {
       alert("Ensures at least one page");
@@ -141,25 +138,24 @@ const BottomToolbar = () => {
     }
 
     const { value } = await Dialog.confirm({
-      title: 'Delete Page',
+      title: "Delete Page",
       message: `Are you sure you want to delete Page ${pageIndex + 1}?`,
-      okButtonTitle: 'Delete',
-      cancelButtonTitle: 'Cancel'
+      okButtonTitle: "Delete",
+      cancelButtonTitle: "Cancel",
     });
     if (!value) return;
-
 
     // Calculate updated pages and undoRedoStack **before updating state**
     const updatedPages = pages.filter((_, index) => index !== pageIndex);
     const updatedUndoRedoStack = undoRedoStack.filter(
-      (_, index) => index !== pageIndex
+      (_, index) => index !== pageIndex,
     );
 
     // Determine the new current page safely
     const newPageIndex =
       // Handling edge case when 1st page being deleted
       currentPage >= pageIndex ? Math.max(0, currentPage - 1) : currentPage;
-    console.log("New pages:", updatedPages, "New current page:", newPageIndex);
+    // console.log("New pages:", updatedPages, "New current page:", newPageIndex);
 
     // Update states
     setPages(updatedPages);
@@ -184,68 +180,67 @@ const BottomToolbar = () => {
     setCurrentPage(pageIndex);
     loadPage(pageIndex); // Load the selected page
   };
-  const addPageAtPosition = (position: number) => {
-    saveStateToUndoStack(); // Save the current page state before modifying
+  // const addPageAtPosition = (position: number) => {
+  //   saveStateToUndoStack(); // Save the current page state before modifying
 
-    setPages((prevPages: string[]) => {
-      const newPages = [...prevPages];
-      newPages.splice(position, 0, ""); // Insert a blank page at the desired position
-      return newPages;
-    });
+  //   setPages((prevPages: string[]) => {
+  //     const newPages = [...prevPages];
+  //     newPages.splice(position, 0, ""); // Insert a blank page at the desired position
+  //     return newPages;
+  //   });
 
-    setUndoRedoStack((prevStacks: UndoRedoStack[]) => {
-      const newStacks = [...prevStacks];
-      newStacks.splice(position, 0, { undoStack: [], redoStack: [] }); // Add a fresh undo/redo stack
-      return newStacks;
-    });
+  //   setUndoRedoStack((prevStacks: UndoRedoStack[]) => {
+  //     const newStacks = [...prevStacks];
+  //     newStacks.splice(position, 0, { undoStack: [], redoStack: [] }); // Add a fresh undo/redo stack
+  //     return newStacks;
+  //   });
 
-    setCurrentPage(position); // Switch to the newly added page
-    clearCanvas();
-  };
+  //   setCurrentPage(position); // Switch to the newly added page
+  //   clearCanvas();
+  // };
   return (
-    <div className="tools flex p-1 flex-col">
-      <div className="row1 flex flex-wrap justify-center items-center">
+    <div className="tools flex flex-col p-2 mx-auto bg-gray-900/85 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-700 min-w-fit mb-2 ">
+      {/* Row 1: Page Controls & Canvas Actions */}
+      <div className="row1 flex flex-wrap justify-center items-center sm:gap-2">
         <IconButton
-          className="tool"
+          className="tool transition-transform hover:scale-110"
           onClick={() => {
             setShowPreview(true);
           }}
-          sx={{ color: "#3C6BB2" }}
+          sx={{ color: "#60A5FA" }} // Light blue
         >
-          <BsEye className="tool" size={25} />
+          <BsEye className="tool" size={22} />
         </IconButton>
+
         <Select
-          // IconComponent={}
-          className="custom-select w-24 p-0 m-0 "
+          className="custom-select w-24 p-0 m-0 shadow-inner"
           style={{
-            border: "none", // Remove border
-            outline: "none", // Remove outline
-            fontSize: 5,
-            padding: 1,
-            background: "gray",
+            border: "none",
+            outline: "none",
+            fontSize: 14,
+            fontWeight: 500,
+            padding: "2px 4px",
+            background: "rgba(255, 255, 255, 0.1)",
+            color: "white",
             borderRadius: 8,
           }}
           sx={{
-            padding: 0, // Removes the outer padding
+            padding: 0,
             "& .MuiSelect-select": {
-              padding: "0 !important", // Removes the inner padding
-              minHeight: "auto", // Adjusts height to content
+              padding: "0 !important",
+              minHeight: "auto",
+              display: "flex",
+              justifyContent: "center",
             },
-            "& fieldset": {
-              border: "none", // Removes the border from outlined variant
-            },
-            "& .MuiSelect-icon": {
-              right: 0,
-              // padding: 2, // Adjust this value as needed (e.g., 8px)
-            },
+            "& fieldset": { border: "none" },
+            "& .MuiSvgIcon-root": { color: "white" },
           }}
           MenuProps={{
             PaperProps: {
               sx: {
                 maxHeight: 300,
-                margin: "8",
-                background: "gray",
-                paddingInlineEnd: 1,
+                background: "#1f2937", // tailwind gray-800
+                color: "white",
               },
             },
           }}
@@ -256,18 +251,11 @@ const BottomToolbar = () => {
             <MenuItem
               key={index}
               value={index}
-              className="w-full p-0 m-0 select-none "
+              className="w-full p-0 m-0 select-none hover:bg-gray-700"
               sx={{ padding: 1 }}
-            // style={{ padding: 0 }}
             >
-              <div className="flex justify-between ">
-                <Button
-                  className="flex items-center space-x-1 !min-w-[80%] !max-w-[80%] !bg-gray-700 px-3 py-2 !mr-2 !rounded-lg !text-white"
-                // style={{ width: "30%", fontSize: 12 }}
-                // className="text-sm"
-                // variant={index === currentPage ? "contained" : "outlined"}
-                // onClick={() => switchPage(index)}
-                >
+              <div className="flex justify-between items-center w-full">
+                <Button className="flex items-center space-x-1 !min-w-[70%] !bg-gray-700 px-3 py-1 !mr-2 !rounded-lg !text-white !normal-case">
                   <span>Page {index + 1}</span>
                 </Button>
                 {index !== currentPage && (
@@ -277,7 +265,7 @@ const BottomToolbar = () => {
                       e.preventDefault();
                       deletePage(index);
                     }}
-                    sx={{ padding: 0 }}
+                    sx={{ padding: 0, color: "#F87171" }} // Light red
                   >
                     <CancelIcon fontSize="small" />
                   </IconButton>
@@ -286,148 +274,166 @@ const BottomToolbar = () => {
             </MenuItem>
           ))}
         </Select>
+
         <IconButton
           onClick={addNewPage}
-          // sx={{ color: "greenyellow" }}
-          className="!text-green-400"
+          className="!text-green-400 transition-transform hover:scale-110"
         >
-          <MdNoteAdd size={25} />
-        </IconButton>
-        <IconButton
-          onClick={() => addPageAtPosition(currentPage)}
-          // sx={{ color: "green" }}
-          className="!text-green-400"
-        >
-          <MdAddCard />
-          {/* Add before this page */}
-        </IconButton>
-        <IconButton
-          className="tool"
-          disabled={undoRedoStack[currentPage].undoStack.length == 0}
-          onClick={undo}
-          sx={{ color: "#3C6BB2", "&:disabled": { color: "gray" } }}
-        >
-          <MdOutlineUndo className="tool" size={25} />
-        </IconButton>
-        <IconButton
-          disabled={undoRedoStack[currentPage].redoStack.length == 0}
-          onClick={redo}
-          sx={{ color: "#3C6BB2", "&:disabled": { color: "gray" } }}
-        >
-          <MdRedo size={25} />
+          <MdNoteAdd size={22} />
         </IconButton>
 
-        {/* <Tooltip title="Clear Canvas"> */}
-        <IconButton
-          onClick={() => clearScreen()}
-          className="!text-red-400"
-        // sx={{ color: "red" }}
-        >
-          <CancelPresentationIcon sx={{ rotate: "90deg" }} />
-        </IconButton>
-        <IconButton
-          className="!text-red-400"
-          onClick={() => deletePage(currentPage)}
-        // sx={{ color: "red" }}
-        >
-          <MdDelete size={25} />
-          {/* Delete this page */}
-        </IconButton>
-        {/* </Tooltip> */}
-      </div>
-      <div className="row2 flex flex-wrap justify-center items-center">
+        <div className="w-px h-6 bg-gray-600 mx-1 hidden sm:block"></div>
+
         {isEraser ? (
           <IconButton
+            className="transition-transform hover:scale-110 bg-gray-800"
             sx={{ color: favouriteColorsList[index] }}
             onClick={toggleTool}
           >
-            <MdDraw size={20} />
+            <MdDraw size={22} />
           </IconButton>
         ) : (
           <IconButton
             onClick={toggleTool}
-            sx={{ color: "yellow" }}
-            className="!text-white"
+            sx={{ color: "#FBBF24" }} // Amber
+            className="!text-white transition-transform hover:scale-110 bg-gray-800"
           >
             <BsEraserFill size={20} />
           </IconButton>
         )}
+
         <Select
-          className="custom-select !min-h-8 !max-h-8"
+          className="custom-select !min-h-8 !max-h-8 shadow-inner"
           style={{
-            border: "none", // Remove border
-            outline: "none", // Remove outline
+            border: "none",
+            outline: "none",
             width: 55,
-            // height:20
-            fontSize: 5,
-            background: "gray",
+            background: "rgba(255, 255, 255, 0.1)",
+            borderRadius: 8,
           }}
           sx={{
-            padding: 0, // Removes the outer padding
+            padding: 0,
             "& .MuiSelect-select": {
-              display: "flex", // Flex display for content centering
-              alignItems: "center", // Vertical centering
-              justifyContent: "center", // Horizontal centering
-              padding: 1, // Removes the inner padding
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: 1,
             },
-            "& fieldset": {
-              border: "none", // Removes the border from outlined variant
-            },
+            "& fieldset": { border: "none" },
+            "& .MuiSvgIcon-root": { color: "white" },
           }}
-          MenuProps={{ PaperProps: { sx: { maxHeight: 300 } } }}
+          MenuProps={{
+            PaperProps: {
+              sx: { maxHeight: 300, background: "#1f2937" }
+            }
+          }}
           value={isEraser ? eraserSize / 10 : strokeSize}
           onChange={handleSizeChange}
           renderValue={(val) => {
             return (
               <div
                 style={{
-                  width: val, // Width and height represent the pen size
+                  width: val,
                   height: val,
-                  backgroundColor: "black",
-                  borderRadius: "75%", // Makes it look like a pen tip
+                  backgroundColor: isEraser ? "white" : favouriteColorsList[index] || "white",
+                  borderRadius: "50%",
                 }}
               ></div>
             );
           }}
         >
-          {penSizes.map((size, index) => (
-            <MenuItem key={index} value={size}>
+          {penSizes.map((size, idx) => (
+            <MenuItem key={idx} value={size} className="hover:bg-gray-700 flex justify-center">
               <div
                 style={{
-                  width: size * 1.5, // Width and height represent the pen size
+                  width: size * 1.5,
                   height: size * 1.5,
-                  backgroundColor: "black",
-                  borderRadius: "75%", // Makes it look like a pen tip
+                  backgroundColor: "white",
+                  borderRadius: "50%",
                 }}
               ></div>
             </MenuItem>
           ))}
         </Select>
+
+        <IconButton
+          onClick={() => clearScreen()}
+          className="!text-red-400 transition-transform hover:scale-110"
+        >
+          <CancelPresentationIcon sx={{ rotate: "90deg", fontSize: 22 }} />
+        </IconButton>
+
+
+        {/* <IconButton
+          className="!text-red-400 transition-transform hover:scale-110"
+          onClick={() => deletePage(currentPage)}
+        >
+          <MdDelete size={22} />
+        </IconButton> */}
+
+      </div>
+
+      <div className="w-full h-px bg-gray-700/60 my-0.5"></div>
+
+      {/* Row 2: Drawing Tools & Misc */}
+      <div className="row2 flex flex-wrap justify-center items-center gap-1 sm:gap-2">
+
+        <IconButton
+          className="tool transition-transform hover:scale-110"
+          disabled={undoRedoStack[currentPage].undoStack.length === 0}
+          onClick={undo}
+          sx={{ color: "#60A5FA", "&:disabled": { color: "#4B5563" } }}
+        >
+          <MdOutlineUndo className="tool" size={22} />
+        </IconButton>
+
+        <IconButton
+          className="transition-transform hover:scale-110"
+          disabled={undoRedoStack[currentPage].redoStack.length === 0}
+          onClick={redo}
+          sx={{ color: "#60A5FA", "&:disabled": { color: "#4B5563" } }}
+        >
+          <MdRedo size={22} />
+        </IconButton>
+
+
+        <div className="w-px h-6 bg-gray-600 mx-1 hidden sm:block"></div>
+
         <ColorPalette />
-        <IconButton onClick={() => openDrawer()} style={{ color: "royalblue" }}>
-          {/* Color Picker */}
-          <ColorLensTwoToneIcon />
+
+        <IconButton
+          onClick={() => openDrawer()}
+          style={{ color: "#818CF8" }}
+          className="transition-transform hover:scale-110"
+        >
+          <ColorLensTwoToneIcon fontSize="small" />
+        </IconButton>
+
+        <div className="w-px h-6 bg-gray-600 mx-1 hidden sm:block"></div>
+        <IconButton
+          onClick={() => setShowImageMenu((prev: boolean) => !prev)}
+          sx={{ color: "#E5E7EB" }}
+          className="transition-transform hover:scale-110"
+        >
+          {showImageMenu ? <MdCancel size={22} /> : <MdImage size={22} />}
         </IconButton>
         <IconButton
           onClick={async () => await exportToPDF()}
-          sx={{ color: "#32A4DA" }}
+          sx={{ color: "#38BDF8" }} // Sky blue
+          className="transition-transform hover:scale-110"
         >
-          <FileDownloadRoundedIcon />
+          <FileDownloadRoundedIcon fontSize="small" />
         </IconButton>
+
         <IconButton
           onClick={() => setShowMainMenu(true)}
-          sx={{ color: "ButtonFace" }}
+          sx={{ color: "#E5E7EB" }} // Gray-200
+          className="transition-transform hover:scale-110"
         >
-          <MdMenu />
+          <MdSettings size={22} />
         </IconButton>
-        <IconButton
-          onClick={() => {
-            setShowImageMenu((prev: boolean) => !prev); // Function form
-          }}
-          sx={{ color: "ButtonFace" }}
-        >
-          {showImageMenu ? <MdCancel /> : <MdImage />}
-        </IconButton>
+
+
       </div>
     </div>
   );

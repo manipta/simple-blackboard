@@ -22,7 +22,7 @@ const DrawingCanvas = () => {
     yStart: number,
     xEnd: number,
     yEnd: number,
-    strokeSize: number
+    strokeSize: number,
   ) => {
     currentTheme.specialEffect(
       canvasContext,
@@ -30,7 +30,7 @@ const DrawingCanvas = () => {
       yStart,
       xEnd,
       yEnd,
-      strokeSize
+      strokeSize,
     );
   };
   const currentTheme = chalkDusterTheme;
@@ -75,7 +75,7 @@ const DrawingCanvas = () => {
     context: CanvasRenderingContext2D,
     x: number,
     y: number,
-    radius: number
+    radius: number,
   ) => {
     context.save(); // Save the current state
     context.arc(x, y, radius, 0, 2 * Math.PI, false);
@@ -84,7 +84,7 @@ const DrawingCanvas = () => {
       x - radius - 1,
       y - radius - 1,
       radius * 2 + 2,
-      radius * 2 + 2
+      radius * 2 + 2,
     );
 
     context.restore(); // Restore state to avoid affecting other drawings
@@ -129,9 +129,8 @@ const DrawingCanvas = () => {
     };
   }, []);
   useEffect(() => {
-    if (!showMainMenu && !showPreview) {
-      resetCanvas();
-    }
+    // Don't reset canvas when returning from menu - preserve the drawing
+    // Only reset on initial mount is handled in the first useEffect
   }, [showPreview, showMainMenu]);
   const { x, y } = useCustomCursor();
 
@@ -164,14 +163,14 @@ const DrawingCanvas = () => {
             point1.y,
             point2.x,
             point2.y,
-            strokeSize
+            strokeSize,
           );
       }
     }
   };
 
   const handleMouseDown = (
-    e: MouseEvent | TouchEvent | { clientX: number; clientY: number }
+    e: MouseEvent | TouchEvent | { clientX: number; clientY: number },
   ) => {
     saveStateToUndoStack();
     const isTouchEvent = "touches" in e;
@@ -197,7 +196,7 @@ const DrawingCanvas = () => {
     // setIsDrawing(true);
   };
   const handleMouseMove = (
-    e: MouseEvent | TouchEvent | { clientX: number; clientY: number }
+    e: MouseEvent | TouchEvent | { clientX: number; clientY: number },
   ) => {
     const isTouchEvent = "touches" in e;
     const canvasContext = getCanvasContext();
@@ -239,140 +238,146 @@ const DrawingCanvas = () => {
     isDrawing.current = false;
   };
 
-  if (showPreview)
-    return (
-      <div>
-        <PagePreviewer pages={pages} />
-      </div>
-    );
-  return (
-    <div className="flex flex-col w-full h-screen">
-      {showMainMenu ? (
-        <MainMenu />
-      ) : (
-        <div>
-          {isLoading && (
-            <div className="h-full w-full content-center text-center bg-black text-white text-2xl">
-              Loading...
-            </div>
-          )}
-          <DrawerShell
-            height={370}
-            children={undefined}
-            menu={
-              <div className=" flex flex-col absolute p-2 items-center justify-center w-full h-fit z-10">
-                <div>
-                  <ColorPicker />
-                </div>
-              </div>
-            }
-          />
 
-          <div
-            className="flex flex-col m-0 p-0 "
-            onMouseDown={(e) => handleMouseDown(e)}
-            onMouseMove={(e) => {
-              handleMouseMove(e);
-              e.preventDefault();
-              // e.stopPropagation();
-            }}
-            onMouseUp={() => handleMouseUp()}
-            onMouseLeave={() => {
-              handleMouseUp();
-              fancyCursor.current = false;
-            }}
-            onMouseEnter={() => {
-              fancyCursor.current = true;
-            }}
-            onTouchStart={(e: any) => handleMouseDown(e)}
-            onTouchMove={(e: any) => {
-              handleTouchMove(e);
-              e.preventDefault();
-              // e.stopPropagation();
-            }}
-            onTouchEnd={() => handleMouseUp()}
-            onTouchCancel={() => handleMouseUp()}
-          >
-            <div
-              style={{
-                // position: "static",
-                boxShadow: "5px 5px 2px black",
-                borderRadius: "8px",
-                border: "8px solid #bc8c5c",
-                background:
-                  boardConfig.type == "image"
-                    ? `url(${boardConfig.board})`
-                    : boardConfig.board,
-                marginTop: 0,
-                // backgroundColor: "red",
-                // backgroundColor: "#274c43",
-                cursor: `none`,
-              }}
-            >
-              {showImageMenu && (
-                <div className=" absolute">
-                  <DemoInsertImage
-                    width={windowWidth.current - 16}
-                    height={windowHeight.current - 120}
-                  />
-                </div>
-              )}
-              <div>
-                {isEraser && isDrawing.current && (
-                  <div
-                    onDrag={(e) => {
-                      e.preventDefault();
-                    }}
-                    onClick={() => {}}
-                    className="fixed border-2 border-white rounded-full"
-                    style={{
-                      position: "fixed",
-                      width: eraserSize,
-                      height: eraserSize,
-                      left: `${x - eraserSize / 2}px`,
-                      top: `${y - eraserSize / 2}px`,
-                    }}
-                  />
-                )}
-                {isDrawing.current && (
-                  <div
-                    className={`custom-cursor fixed z-10 w-10 h-12 select-none no-drag ${
-                      isEraser ? "" : null
-                    } `}
-                    style={{
-                      backgroundImage: `url(${
-                        chalkAnimation
-                          ? isEraser
-                            ? "/assets/duster2.png"
-                            : pen
-                          : ""
-                      })`,
-                      backgroundSize: "contain",
-                      backgroundRepeat: "no-repeat",
-                      left: `${x + window.innerWidth * 0.001}px`,
-                      top: `${y + window.innerWidth * 0.001}px`,
-                      cursor: `none`,
-                    }}
-                  />
-                )}
-                <canvas
-                  id="myCanvas"
-                  ref={canvasRef}
-                  width={(windowWidth.current - 16) * (window.devicePixelRatio || 1)}
-                  height={(windowHeight.current - 120) * (window.devicePixelRatio || 1)}
-                  style={{
-                     width: `${windowWidth.current - 16}px`,
-                     height: `${windowHeight.current - 120}px`,
-                  }}
-                ></canvas>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col">
-            <BottomToolbar />
-          </div>
+  return (
+    <div className="flex flex-col w-full h-screen relative">
+      {showPreview &&
+        <div className="absolute inset-0 z-50">
+          <PagePreviewer pages={pages} />
+        </div>
+      }
+      {/* Absolutely positioned menu overlay */}
+      {showMainMenu && (
+        <div className="absolute inset-0 z-50">
+          <MainMenu />
         </div>
       )}
+
+      {/* Canvas - always mounted, never unmounted */}
+      <div className="w-full">
+        {isLoading && (
+          <div className="h-full w-full content-center text-center bg-black text-white text-2xl">
+            Loading...
+          </div>
+        )}
+        <DrawerShell
+          height={450}
+          children={undefined}
+          menu={
+            <div className=" flex flex-col absolute p-2 items-center justify-center w-full h-fit z-10">
+              <div>
+                <ColorPicker />
+              </div>
+            </div>
+          }
+        />
+
+        <div
+          className="flex flex-col m-0 p-0 "
+          onMouseDown={(e) => handleMouseDown(e)}
+          onMouseMove={(e) => {
+            handleMouseMove(e);
+            e.preventDefault();
+            // e.stopPropagation();
+          }}
+          onMouseUp={() => handleMouseUp()}
+          onMouseLeave={() => {
+            handleMouseUp();
+            fancyCursor.current = false;
+          }}
+          onMouseEnter={() => {
+            fancyCursor.current = true;
+          }}
+          onTouchStart={(e: any) => handleMouseDown(e)}
+          onTouchMove={(e: any) => {
+            handleTouchMove(e);
+            e.preventDefault();
+            // e.stopPropagation();
+          }}
+          onTouchEnd={() => handleMouseUp()}
+          onTouchCancel={() => handleMouseUp()}
+        >
+          <div
+            style={{
+              // position: "static",
+              boxShadow: "5px 5px 2px black",
+              borderRadius: "8px",
+              border: "8px solid #bc8c5c",
+              background:
+                boardConfig.type == "image"
+                  ? `url(${boardConfig.board})`
+                  : boardConfig.board,
+              marginTop: 0,
+              // backgroundColor: "red",
+              // backgroundColor: "#274c43",
+              cursor: `none`,
+            }}
+          >
+            {showImageMenu && (
+              <div className=" absolute">
+                <DemoInsertImage
+                  width={windowWidth.current - 16}
+                  height={windowHeight.current - 120}
+                />
+              </div>
+            )}
+            <div>
+              {isEraser && isDrawing.current && (
+                <div
+                  onDrag={(e) => {
+                    e.preventDefault();
+                  }}
+                  onClick={() => { }}
+                  className="fixed border-2 border-white rounded-full"
+                  style={{
+                    position: "fixed",
+                    width: eraserSize,
+                    height: eraserSize,
+                    left: `${x - eraserSize / 2}px`,
+                    top: `${y - eraserSize / 2}px`,
+                  }}
+                />
+              )}
+              {isDrawing.current && (
+                <div
+                  className={`custom-cursor fixed z-10 w-10 h-12 select-none no-drag ${isEraser ? "" : null
+                    } `}
+                  style={{
+                    backgroundImage: `url(${chalkAnimation
+                      ? isEraser
+                        ? "/assets/duster2.png"
+                        : pen
+                      : ""
+                      })`,
+                    backgroundSize: "contain",
+                    backgroundRepeat: "no-repeat",
+                    left: `${x + window.innerWidth * 0.001}px`,
+                    top: `${y + window.innerWidth * 0.001}px`,
+                    cursor: `none`,
+                  }}
+                />
+              )}
+              <canvas
+                id="myCanvas"
+                ref={canvasRef}
+                width={
+                  (windowWidth.current - 16) * (window.devicePixelRatio || 1)
+                }
+                height={
+                  (windowHeight.current - 120) * (window.devicePixelRatio || 1)
+                }
+                style={{
+                  width: `${windowWidth.current - 16}px`,
+                  height: `${windowHeight.current - 120}px`,
+                }}
+              ></canvas>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col z-10 w-full">
+          <BottomToolbar />
+        </div>
+      </div>
     </div>
   );
 };
